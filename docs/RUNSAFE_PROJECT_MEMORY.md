@@ -12,14 +12,15 @@ Stage 1: Foundation & Runtime Bootstrap (Environment verification & initial proj
 - Authoritative Technical Requirements Document (TRD) completed and frozen in `docs/04_TRD.md` (IDs `TR-001` through `TR-016`, pipeline architectures, hardware budget, and scenario criteria).
 - Authoritative Workflow & Data Flow Specification completed and frozen in `docs/05_WORKFLOW_AND_DATA_FLOW.md` (Workflows `WF-INC-001` through `WF-SSE-001`, sequence diagrams, state matrices, and hero flow traces).
 - Authoritative UI/UX Specification completed and frozen in `docs/06_UI_UX_SPECIFICATION.md` (Minimalist Monochrome design system, controlled rounded-corner scale, zero drop shadows, typography triad, wireframes for 7 core surfaces, and live demo interaction flows).
+- Authoritative Data, Database & API Design Specification completed and frozen in `docs/07_DATA_DATABASE_API_DESIGN.md` (Dual-database boundary: SQLite `runsafe.db` for control plane with 15 tables and SHA-256 payload integrity hashing vs PostgreSQL `checkout_db` on 5432 for demo workload; complete `/api/v1` REST matrix and `/api/v1/incidents/:id/stream` SSE channel).
 - Verified `@truefoundry/trueforge` CLI (v0.2.1) downloaded and operational via `npx` (runs on default port 8790 in standalone mode with SQLite).
 
 ## Partially Completed
-- Documentation suite preparation (PRD complete; awaiting next doc prompt).
+- Documentation suite preparation (PRD, TRD, Workflow, UI/UX, Data/API complete; awaiting next doc prompt or start of Stage 1 implementation).
 - Toolchain inspection complete.
 
 ## Pending
-- Comprehensive documentation package setup (PRD, TRD, Architecture, Data flow, Contracts, Safety Kernel).
+- Comprehensive documentation package setup (Architecture, MCP specs, Safety Kernel, Testing/Evaluation).
 - Stage 1: Repository bootstrap (TypeScript monorepo / Fastify control plane + Next.js frontend + shared Zod schemas + SQLite).
 - Stage 2: Real Demo Infrastructure (Docker Compose with Nginx canary reverse proxy, checkout-api replicas, PostgreSQL, traffic generation & failure injection).
 - Stage 3: TrueForge Agent Core & Model Routing.
