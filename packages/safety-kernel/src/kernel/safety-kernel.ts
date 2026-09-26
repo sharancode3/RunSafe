@@ -113,7 +113,27 @@ export class SafetyKernel {
       });
     }
 
-    // 4. Evaluate Supporting Evidence Freshness & Sufficiency Policy
+    // 4. Evaluate Confidence Threshold Gate (FR-033, TR-011: Confidence < 0.70 prohibits blind mutations)
+    if (!toolResult.toolRecord.readOnly && action.confidenceScore < 0.70) {
+      return this.recordDecision({
+        actionId: action.id,
+        policyDecision: "BLOCKED",
+        reasonCode: "CONFIDENCE_BELOW_THRESHOLD",
+        reasonMessage: `Action confidence score (${action.confidenceScore.toFixed(2)}) is below 0.70 safety threshold. Prohibiting blind mutations.`,
+        matchedRule: "RULE_CONFIDENCE_THRESHOLD_GATE",
+        preconditionsPassed: false,
+        checksSummary: {
+          toolCheck: true,
+          fingerprintCheck: true,
+          contractCheck: true,
+          evidenceCheck: false,
+          preconditionCheck: false,
+          details: { confidenceScore: action.confidenceScore, threshold: 0.70 },
+        },
+      });
+    }
+
+    // 5. Evaluate Supporting Evidence Freshness & Sufficiency Policy
     const evidenceResult = evaluateEvidencePolicy(action, contractResult.step);
     if (!evidenceResult.passed) {
       return this.recordDecision({
@@ -134,7 +154,7 @@ export class SafetyKernel {
       });
     }
 
-    // 5. Evaluate Contract Preconditions
+    // 6. Evaluate Contract Preconditions
     const preconditionResult = evaluatePreconditionPolicy(
       contractResult.step,
       evidenceResult.evidenceRecords
@@ -159,7 +179,7 @@ export class SafetyKernel {
       });
     }
 
-    // 6. Evaluate Blast Radius
+    // 7. Evaluate Blast Radius
     const blastResult = evaluateBlastRadiusPolicy(action);
     if (!blastResult.passed) {
       return this.recordDecision({
@@ -180,7 +200,7 @@ export class SafetyKernel {
       });
     }
 
-    // 7. Authoritative Decision Mapping: Read-Only vs Autonomous Low-Risk vs Human Approval High-Risk
+    // 8. Authoritative Decision Mapping: Read-Only vs Autonomous Low-Risk vs Human Approval High-Risk
     const toolRecord = toolResult.toolRecord;
     const step = contractResult.step;
 

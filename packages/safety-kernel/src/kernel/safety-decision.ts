@@ -29,6 +29,7 @@ export const ReasonCodeSchema = z.enum([
   "EVIDENCE_CONFLICT",
   "FINGERPRINT_TAMPERED",
   "INVALID_ACTION_STATE",
+  "CONFIDENCE_BELOW_THRESHOLD",
 ]);
 export type ReasonCode = z.infer<typeof ReasonCodeSchema>;
 

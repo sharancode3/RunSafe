@@ -9,7 +9,9 @@
 *(Category descriptor: AI SRE Control Plane)*
 
 ## Current Stage
-Stage 7: Bad Deployment Autonomous Recovery Hero (Completed & Verified; automated Stage 1-7 verifications 100% green; 89 unit tests passing across 13 test suites; Stage 7 Hero verified across 3 consecutive cycles with 39/39 checks passing).
+Stage 8: Runbook CI, Crash Recovery, and Confidence Abstention (Completed & Verified)
+Stage 9: RunSafe Product Frontend UI (Completed & Verified)
+All Stage 1–9 automated verifiers are 100% green; 93 unit and integration tests passing across 15 test suites; Next.js 15 production build compiled cleanly.
 
 ## Completed
 - Official Problem Statement Alignment Audited & Locked: RunSafe is positioned unmistakably as a **Runbook Executor** first. All architectural subsystems (Recovery Contracts, Evidence Engine, Proof-Carrying Actions, Safety Kernel, TrueForge Sandbox, Progressive Canary Rollback, Independent Verifier, Runbook CI) are explicitly structured as capabilities that enhance and guarantee safe runbook execution.
@@ -143,7 +145,23 @@ Stage 7: Bad Deployment Autonomous Recovery Hero (Completed & Verified; automate
     - Step 7: Final Synthetic Verification: Independent Verifier executes end-to-end synthetic ACID orders through Nginx ingress. All probes PASS.
     - Resolution: Incident transitions to `VERIFIED_RECOVERY` with complete 54-event chronological audit trail.
   - Stage 7 Verification script (`scripts/stage7_verify.ts` via `npm run stage7:verify`) executed across 3 consecutive cycles: 39/39 checks passed 100%.
-  - Complete monorepo unit & integration test suite passing: 89/89 tests across 13 test suites (`npm test`).
+  - Stage 8 Delivered (Runbook CI, Crash Recovery, and Confidence Abstention):
+    - Target isolation strictly enforced on LOCAL environment.
+    - Scenario 1 (Process Crash): Autonomous low-risk recovery verified (PASS).
+    - Scenario 2 (Bad Deployment Hero): Staging rehearsal with approval checkpoints and canary rollback verified (PASS).
+    - Scenario 3 (Ambiguous Telemetry): Diagnostic confidence score (0.41) below 0.70 safety threshold triggers explicit epistemic halt (ABSTAINED) with ZERO mutations dispatched (PASS).
+    - SQLite tables: rehearsal_scenarios and rehearsal_runs.
+    - Fastify routes: /api/v1/rehearsals/* and /api/v1/events/* with SSE streaming.
+    - Automated Stage 8 Verifier (`scripts/stage8_verify.ts` via `npm run stage8:verify`) passing 10/10 checks.
+  - Stage 9 Delivered (RunSafe Product Frontend UI):
+    - Minimalist Monochrome UI built in `apps/web` with Next.js 15 App Router, React 19, and Tailwind CSS following `docs/06_UI_UX_SPECIFICATION.md`:
+      - Command Center (/): Real system readiness, active incident banner, and service status.
+      - Incident Room (/incidents/[id]): 65% chronological timeline, 35% evidence vault, SSE real-time stream.
+      - Approval Center (/approvals): High-stakes inverted Operational Decision Card with SHA-256 fingerprint, Approve/Reject controls.
+      - Runbook CI (/rehearsals): Staging runner, coverage gauge (100%), and run history ledger.
+    - Next.js production build (`npm run web:build`) compiled 100% cleanly.
+    - Automated Stage 9 Verifier (`scripts/stage9_verify.ts` via `npm run stage9:verify`) passing 7/7 checks.
+  - Complete monorepo unit & integration test suite passing: 93/93 tests across 15 test suites (`npm test`).
   - Zero TypeScript compiler errors (`npx tsc --noEmit` clean).
 
 ## Blocked on Organizer Provisioning
@@ -152,8 +170,7 @@ Stage 7: Bad Deployment Autonomous Recovery Hero (Completed & Verified; automate
 - Organizer AWS Account Credentials: Local multi-container Docker environment (Nginx, 2x replicas, Postgres) verified 100%.
 
 ## Pending
-- Stage 8: Frontend UI / Command Center (Next.js 15, Minimalist Monochrome UI, live SSE stream, approval modal, incident timeline, live verifier status).
-- Stage 9: Live Demo Rehearsal & Presentation Polish (Scenarios 1, 2, 3 video recording & presentation slide deck).
+- Stage 10: Live Demo Recording, Presentation Script & Final Hackathon Submission Package.
 
 
 ## Current Architecture Reality

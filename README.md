@@ -473,16 +473,110 @@ npm run stage7:verify
 
 ---
 
+## Stage 8: Runbook CI, Staging Rehearsals & Confidence Abstention
+
+RunSafe proves recovery runbooks *before* production emergencies happen by running continuous rehearsals in an isolated staging environment (`LOCAL` Docker stack):
+
+```text
+Staging Preflight Check
+        ↓
+Environment Reset to Baseline (v1.0.0)
+        ↓
+Objective Baseline Verification (200 OK + ACID synthetic order)
+        ↓
+Controlled Scenario Fault Injection
+        ↓
+Real RunSafe Recovery Orchestrator & Safety Kernel
+        ↓
+Objective Probe Verification by Independent Verifier
+        ↓
+Post-Rehearsal Baseline Cleanup & Run Ledger Persistence
+```
+
+### The 3 Continuously Verified Scenarios
+
+1. **Process / Service Crash:**
+   - Controlled `docker stop runsafe-checkout-api-1`.
+   - Safety Kernel auto-allows low-risk reversible restart (`restart_service`).
+   - Independent Verifier confirms Ingress HTTP 200 & synthetic orders commit.
+   - Outcome: `PASS` (`VERIFIED_RECOVERY`).
+2. **Bad Deployment Canary Rollback Hero:**
+   - Deceptive `v2.0.0` schema lock defect injected on `checkout-api-2`.
+   - Autonomous restart fails verification (Exit 0 != recovery; negative evidence recorded).
+   - Isolated canary rollback pauses at human approval checkpoint (`APPROVAL_REQUIRED`).
+   - Operator grants signed digital authorization.
+   - Canary rollback and full fleet rollback verified with real synthetic ACID transactions.
+   - Outcome: `PASS` (`VERIFIED_RECOVERY`).
+3. **Ambiguous Telemetry & Confidence-Based Abstention:**
+   - Intermittent downstream payment timeouts and latency injected.
+   - Diagnostic confidence score ($0.41$) falls below the $0.70$ safety threshold (`FR-033`, `TR-011`).
+   - Safety Kernel prohibits blind mutations. System halts autonomous loop and escalates to human on-call (`ABSTAINED`).
+   - **Critical Invariant Proven:** **Zero mutations dispatched** to infrastructure!
+   - Outcome: `PASS` (Safely Abstained).
+
+To run the complete Stage 8 Runbook CI verification:
+```bash
+npm run stage8:verify
+```
+
+---
+
+## Stage 9: RunSafe Product UI (Minimalist Monochrome Command Center)
+
+The RunSafe product UI is an architectural, editorial monochrome command environment built with **Next.js 15 App Router**, **React 19**, and **Tailwind CSS** following `docs/06_UI_UX_SPECIFICATION.md`:
+
+- **Aesthetic:** Absolute monochrome (pure `#FFFFFF` canvas, deep `#000000` inverted cards, restrained zinc dividers, zero drop shadows).
+- **Architecture:** Browser UI $\rightarrow$ RunSafe Fastify Control Plane (:4000) $\rightarrow$ SQLite `runsafe.db` / Live SSE Event Stream (`/api/v1/events/stream`).
+
+### Core Screens & Workflows
+
+1. **Command Center (`/`):**
+   - Live system readiness indicators (Control Plane, TrueForge :8790, Primary Model, MCP Server :4001, Docker Workload).
+   - Inverted active incident alert banner with direct jump to Incident Room.
+   - Workload fleet status table (Nginx, checkout-api-1, checkout-api-2, Postgres).
+   - Runbook CI rehearsal summary ($100\%$ recovery coverage, 3/3 failure modes verified).
+2. **Incident Room (`/incidents/[id]`):**
+   - **65% Left (Live Chronological Timeline):** Server-sent events displaying observations, sandboxed diagnostic scripts, proposed Proof-Carrying Actions, Safety Kernel decisions, and verifier evaluations.
+   - **35% Right (Contextual Evidence Vault & Objective Verifier):** Supporting telemetry records with IDs (`[EVD-...]`), and real-time objective criteria checklist.
+3. **Approval Center (`/approvals`):**
+   - Inverted black **Operational Decision Card** (`rounded-xl`): Displays proposed tool, arguments, blast radius, operational justification ("Why"), and SHA-256 cryptographic payload fingerprint.
+   - **[Approve & Execute Mutation]** and **[Reject & Escalate]** buttons.
+4. **Runbook CI & Staging Rehearsals (`/rehearsals`):**
+   - Interactive Scenario Runner (Process Crash, Bad Deployment Hero, Ambiguous Telemetry).
+   - Real-time staging rehearsal logs, recovery coverage gauge ($100\%$), and chronological run ledger.
+
+### Starting the Product UI
+
+```bash
+# 1. Build production bundle
+npm run web:build
+
+# 2. Start production server on port 3000
+npm run web:start
+
+# Or run development server:
+npm run web:dev
+```
+Open **[http://localhost:3000](http://localhost:3000)** in your browser.
+
+To verify the Stage 9 UI build and API integrations:
+```bash
+npm run stage9:verify
+```
+
+---
+
 ## Test Suites & Stage Verifications
 
 RunSafe maintains a 100% green verification barrier across every stage of the challenge:
 
 ```bash
-# 1. Monorepo Unit & Integration Tests (89 tests across 13 suites)
+# 1. Monorepo Unit & Integration Tests (93 tests across 15 suites)
 npm test
 
-# 2. Complete Type Safety Check
+# 2. Complete Type Safety Check (Monorepo & Frontend)
 npx tsc --noEmit
+npm run build --workspace=@runsafe/web
 
 # 3. Stage-by-Stage Verification Scripts
 npm run stage1:verify   # Stage 1: Foundation, contracts, ports, fastify server
@@ -492,5 +586,8 @@ npm run stage4:verify   # Stage 4: Runbook compiler, recovery contracts & eviden
 npm run stage5:verify   # Stage 5: Proof-carrying actions & deterministic safety kernel
 npm run stage6:verify   # Stage 6: Independent objective verifier & recovery engine
 npm run stage7:verify   # Stage 7: Bad deployment autonomous recovery hero (3 cycles)
+npm run stage8:verify   # Stage 8: Runbook CI, crash recovery & confidence abstention
+npm run stage9:verify   # Stage 9: Product frontend UI & control plane integration
 ```
+
 

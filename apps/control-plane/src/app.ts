@@ -7,6 +7,8 @@ import { runbookRoutes } from "./routes/runbooks.js";
 import { evidenceRoutes } from "./routes/evidence.js";
 import { actionRoutes } from "./routes/actions.js";
 import { incidentRoutes } from "./routes/incidents.js";
+import { rehearsalRoutes } from "./routes/rehearsals.js";
+import { eventRoutes } from "./routes/events.js";
 
 export function buildApp(): FastifyInstance {
   const app = fastify({
@@ -39,6 +41,8 @@ export function buildApp(): FastifyInstance {
   app.register(evidenceRoutes);
   app.register(actionRoutes);
   app.register(incidentRoutes);
+  app.register(rehearsalRoutes);
+  app.register(eventRoutes);
 
   // Global structured error handler
   app.setErrorHandler((error: any, request, reply) => {

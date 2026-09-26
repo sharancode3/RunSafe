@@ -224,7 +224,70 @@ export function initDatabase(dbPath?: string): DatabaseSync {
       FOREIGN KEY (incident_id) REFERENCES incidents(id) ON DELETE CASCADE
     );
     CREATE INDEX IF NOT EXISTS idx_incident_events_incident ON incident_events(incident_id, created_at);
+
+    CREATE TABLE IF NOT EXISTS rehearsal_scenarios (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL,
+      target_service TEXT NOT NULL,
+      fault_type TEXT NOT NULL,
+      expected_recovery_tool TEXT NOT NULL,
+      expected_outcome TEXT NOT NULL DEFAULT 'PASS'
+    );
+
+    CREATE TABLE IF NOT EXISTS rehearsal_runs (
+      id TEXT PRIMARY KEY,
+      scenario_id TEXT NOT NULL,
+      contract_id TEXT NOT NULL,
+      incident_id TEXT,
+      target_environment TEXT NOT NULL DEFAULT 'LOCAL',
+      outcome TEXT NOT NULL,
+      duration_ms INTEGER NOT NULL DEFAULT 0,
+      details TEXT NOT NULL,
+      executed_at TEXT NOT NULL,
+      FOREIGN KEY (scenario_id) REFERENCES rehearsal_scenarios(id) ON DELETE RESTRICT
+    );
+    CREATE INDEX IF NOT EXISTS idx_rehearsal_runs_scenario ON rehearsal_runs(scenario_id);
   `);
+
+  // Seed default rehearsal scenarios if empty
+  const count = (db.prepare("SELECT COUNT(*) as cnt FROM rehearsal_scenarios").get() as any)?.cnt;
+  if (!count || count === 0) {
+    const insertScenario = db.prepare(`
+      INSERT INTO rehearsal_scenarios (id, name, description, target_service, fault_type, expected_recovery_tool, expected_outcome)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    insertScenario.run(
+      "scenario_crash",
+      "Process / Service Crash",
+      "Controlled container termination on checkout-api-1; autonomous restart authorized by Safety Kernel with independent verification.",
+      "checkout-api-1",
+      "PROCESS_CRASH",
+      "restart_service",
+      "PASS"
+    );
+
+    insertScenario.run(
+      "scenario_bad_deployment",
+      "Bad Deployment Canary Rollback (Hero Demo)",
+      "Deceptive v2.0.0 schema lock; autonomous restart fails verification, canary rollback pauses for human approval, verified recovery declared.",
+      "checkout-api-2",
+      "BAD_DEPLOYMENT",
+      "rollback_canary",
+      "PASS"
+    );
+
+    insertScenario.run(
+      "scenario_ambiguous",
+      "Ambiguous Telemetry & Confidence Abstention",
+      "Intermittent downstream timeouts with low diagnostic confidence (< 0.70); agent halts autonomous mutation and escalates to human on-call with zero mutations dispatched.",
+      "checkout-service",
+      "AMBIGUOUS_LATENCY",
+      "none",
+      "PASS"
+    );
+  }
 
   return db;
 }

@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F5F5F5;
+  --bg-tertiary: #EBEBEB;
+  --bg-inverted: #000000;
+
+  --text-primary: #000000;
+  --text-secondary: #525252;
+  --text-tertiary: #8A8A8A;
+  --text-inverted: #FFFFFF;
+
+  --border-light: #E5E5E5;
+  --border-medium: #8A8A8A;
+  --border-strong: #000000;
+  --border-inverted: #FFFFFF;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Zero box shadow enforcement */
+* {
+  box-shadow: none !important;
+}
+
+/* Micro-textures */
+.texture-grid {
+  background-size: 16px 16px;
+  background-image: 
+    linear-gradient(to right, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+}
+
+.texture-hatch {
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 6px,
+    rgba(0, 0, 0, 0.08) 6px,
+    rgba(0, 0, 0, 0.08) 7px
+  );
+}
+
+.texture-hatch-inverted {
+  background: repeating-linear-gradient(
+    45deg,
+    #000000,
+    #000000 6px,
+    #18181b 6px,
+    #18181b 7px
+  );
+}
+
+/* Editorial Serif & Monospace */
+.font-serif-title {
+  font-family: Georgia, "Playfair Display", serif;
+  letter-spacing: -0.02em;
+}
+
+.font-editorial-body {
+  font-family: Georgia, "Source Serif 4", serif;
+}
+
+.font-tech-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}

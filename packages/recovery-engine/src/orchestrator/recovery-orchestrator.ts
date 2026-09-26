@@ -47,6 +47,12 @@ export interface StepExecutionResult {
   reason?: string;
 }
 
+export interface ExecuteStepOptions {
+  confidenceScore?: number;
+  forceAbstain?: boolean;
+  abstainReason?: string;
+}
+
 export class RecoveryOrchestrator {
   private safetyKernel = new SafetyKernel();
   private approvalService = new ApprovalService();
@@ -54,9 +60,38 @@ export class RecoveryOrchestrator {
   private verifier = new IndependentVerifier();
   private actionRepo = new ActionRepository();
 
+  public abstainIncident(
+    incidentId: string,
+    reason: string,
+    confidenceScore?: number
+  ): StepExecutionResult {
+    const incident = incidentRepository.getIncident(incidentId);
+    if (!incident) {
+      throw new Error(`Incident '${incidentId}' not found.`);
+    }
+
+    const updated = incidentRepository.updateIncident(incident.id, {
+      status: "ABSTAINED",
+    });
+
+    incidentRepository.recordEvent(incident.id, "INCIDENT_ABSTAINED", {
+      message: reason,
+      confidenceScore: confidenceScore ?? 0.41,
+      threshold: 0.70,
+      timestamp: new Date().toISOString(),
+    });
+
+    return {
+      status: "ABSTAINED",
+      incident: updated,
+      reason,
+    };
+  }
+
   public async executeNextStep(
     incidentId: string,
-    adapterOverride?: InfrastructureAdapter
+    adapterOverride?: InfrastructureAdapter,
+    options?: ExecuteStepOptions
   ): Promise<StepExecutionResult> {
     const incident = incidentRepository.getIncident(incidentId);
     if (!incident) {
@@ -263,6 +298,15 @@ export class RecoveryOrchestrator {
     }
     const supportingIds = existingEvidence.map((e) => e.id);
 
+    // Confidence-based abstention check (FR-033, TR-011: Confidence < 0.70 halts mutation loop)
+    const confidence = options?.confidenceScore ?? 0.95;
+    if (options?.forceAbstain || confidence < 0.70) {
+      const reason =
+        options?.abstainReason ||
+        `Autonomous action halted: Diagnostic confidence score (${confidence.toFixed(2)}) is below 0.70 safety threshold. Evidence is ambiguous or contradictory. Prohibiting blind mutations. Escalating to human SRE.`;
+      return this.abstainIncident(incident.id, reason, confidence);
+    }
+
     // Build Proof-Carrying Action with cryptographic fingerprint
     const pca = buildProofCarryingAction(
       {
@@ -272,7 +316,7 @@ export class RecoveryOrchestrator {
         toolName: step.toolName,
         toolArguments: step.defaultArguments,
         justificationSummary: `Executing runbook step ${step.id}: ${step.title}`,
-        confidenceScore: 0.95,
+        confidenceScore: confidence,
         supportingEvidenceIds: supportingIds,
       },
       step
