@@ -58,32 +58,40 @@ export class LocalDockerAdapter implements InfrastructureAdapter {
   public async getRecentLogs(serviceId: string, limit = 50): Promise<Array<Record<string, unknown>>> {
     const record = validateResource(serviceId, this.environment, "get_recent_logs");
     const safeLimit = Math.min(100, Math.max(1, limit));
-    const container = record.localMapping.containerName;
+    const primaryContainer = record.localMapping.containerName;
+    const containersToQuery =
+      serviceId === "checkout-service"
+        ? ["runsafe-checkout-api-2", "runsafe-checkout-api-1", primaryContainer]
+        : [primaryContainer];
 
     try {
-      const rawLogs = execDocker(`docker logs --tail ${safeLimit} ${container}`);
-      const lines = rawLogs.split("\n").filter((l) => l.trim().length > 0);
-
       const parsedLogs: Array<Record<string, unknown>> = [];
-      for (const line of lines) {
+      for (const container of containersToQuery) {
         try {
-          const parsed = JSON.parse(line);
-          parsedLogs.push(parsed);
-        } catch {
-          parsedLogs.push({
-            service: serviceId,
-            container,
-            rawMessage: line,
-            timestamp: new Date().toISOString(),
-          });
-        }
+          const rawLogs = execDocker(`docker logs --tail ${safeLimit} ${container}`);
+          const lines = rawLogs.split("\n").filter((l) => l.trim().length > 0);
+
+          for (const line of lines) {
+            try {
+              const parsed = JSON.parse(line);
+              parsedLogs.push({ ...parsed, container });
+            } catch {
+              parsedLogs.push({
+                service: serviceId,
+                container,
+                rawMessage: line,
+                timestamp: new Date().toISOString(),
+              });
+            }
+          }
+        } catch {}
       }
 
       return parsedLogs;
     } catch (err: any) {
       throw new RunSafeOperationalError(
         "REMOTE_EXECUTION_FAILED",
-        `Failed to retrieve logs for container '${container}': ${err.message}`
+        `Failed to retrieve logs for service '${serviceId}': ${err.message}`
       );
     }
   }

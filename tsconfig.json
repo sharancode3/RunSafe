@@ -20,7 +20,9 @@
       "@runsafe/runbooks": ["packages/runbooks/src"],
       "@runsafe/evidence": ["packages/evidence/src"],
       "@runsafe/actions": ["packages/actions/src"],
-      "@runsafe/safety-kernel": ["packages/safety-kernel/src"]
+      "@runsafe/safety-kernel": ["packages/safety-kernel/src"],
+      "@runsafe/verifier": ["packages/verifier/src"],
+      "@runsafe/recovery-engine": ["packages/recovery-engine/src"]
     }
   },
   "exclude": ["node_modules", "dist"]

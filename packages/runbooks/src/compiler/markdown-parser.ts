@@ -15,10 +15,10 @@ export function parseRunbookMarkdown(
   }
 ): Partial<RecoveryContract> {
   // If the markdown contains a fenced json block matching recovery contract, try extracting it
-  const jsonMatch = markdown.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-  if (jsonMatch) {
+  const codeBlocks = [...markdown.matchAll(/```(?:json)?\s*([\s\S]*?)\s*```/g)];
+  for (const block of codeBlocks) {
     try {
-      const parsed = JSON.parse(jsonMatch[1]);
+      const parsed = JSON.parse(block[1]);
       if (parsed.steps && Array.isArray(parsed.steps)) {
         return {
           id: parsed.id || `contract_${defaults.runbookId}_${Date.now()}`,
@@ -36,7 +36,7 @@ export function parseRunbookMarkdown(
         };
       }
     } catch {
-      // Fall through to Markdown line-by-line parsing
+      // Try next code block
     }
   }
 

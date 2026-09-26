@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
 import { buildApp } from "../../apps/control-plane/src/app.js";
 import { type FastifyInstance } from "fastify";
 import { RunbookRepository, type RecoveryContract } from "@runsafe/runbooks";
@@ -97,6 +97,10 @@ describe("Control Plane Action Endpoints (Fastify)", () => {
     };
 
     runbookRepo.saveContract(activeContract, { validationStatus: "STRUCTURALLY_VALID" });
+    runbookRepo.activateContract(activeContract.id);
+  });
+
+  beforeEach(() => {
     runbookRepo.activateContract(activeContract.id);
   });
 

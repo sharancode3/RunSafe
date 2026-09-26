@@ -186,6 +186,44 @@ export function initDatabase(dbPath?: string): DatabaseSync {
     );
     CREATE INDEX IF NOT EXISTS idx_tool_executions_action ON tool_executions(action_id);
     CREATE INDEX IF NOT EXISTS idx_tool_executions_token ON tool_executions(execution_token);
+
+    CREATE TABLE IF NOT EXISTS incidents (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      target_service TEXT NOT NULL,
+      environment TEXT NOT NULL DEFAULT 'LOCAL',
+      status TEXT NOT NULL DEFAULT 'DETECTED',
+      active_contract_id TEXT,
+      current_step_id TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      resolved_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_incidents_status ON incidents(status);
+    CREATE INDEX IF NOT EXISTS idx_incidents_service ON incidents(target_service);
+
+    CREATE TABLE IF NOT EXISTS verification_runs (
+      id TEXT PRIMARY KEY,
+      incident_id TEXT NOT NULL,
+      action_id TEXT,
+      contract_step_id TEXT NOT NULL,
+      overall_status TEXT NOT NULL,
+      details TEXT NOT NULL,
+      duration_ms INTEGER NOT NULL DEFAULT 0,
+      verified_at TEXT NOT NULL,
+      FOREIGN KEY (incident_id) REFERENCES incidents(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_verification_incident ON verification_runs(incident_id);
+
+    CREATE TABLE IF NOT EXISTS incident_events (
+      id TEXT PRIMARY KEY,
+      incident_id TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      payload TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (incident_id) REFERENCES incidents(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_incident_events_incident ON incident_events(incident_id, created_at);
   `);
 
   return db;

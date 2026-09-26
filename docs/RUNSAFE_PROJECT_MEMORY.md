@@ -9,7 +9,7 @@
 *(Category descriptor: AI SRE Control Plane)*
 
 ## Current Stage
-Stage 5: Proof-Carrying Actions & Deterministic Safety Kernel (Completed & Verified locally; automated Stage 1-5 verifications 100% green; 78 unit tests passing across 10 test suites).
+Stage 7: Bad Deployment Autonomous Recovery Hero (Completed & Verified; automated Stage 1-7 verifications 100% green; 89 unit tests passing across 13 test suites; Stage 7 Hero verified across 3 consecutive cycles with 39/39 checks passing).
 
 ## Completed
 - Official Problem Statement Alignment Audited & Locked: RunSafe is positioned unmistakably as a **Runbook Executor** first. All architectural subsystems (Recovery Contracts, Evidence Engine, Proof-Carrying Actions, Safety Kernel, TrueForge Sandbox, Progressive Canary Rollback, Independent Verifier, Runbook CI) are explicitly structured as capabilities that enhance and guarantee safe runbook execution.
@@ -101,28 +101,60 @@ Stage 5: Proof-Carrying Actions & Deterministic Safety Kernel (Completed & Verif
   - MCP Server mutation guard upgraded: validates single-use execution tokens against `tool_executions` table in SQLite.
   - 78 Vitest unit tests passing 100% across 10 test suites (`tests/unit/pca.test.ts`, `tests/unit/safety-kernel.test.ts`, `tests/unit/action-routes.test.ts`, etc.).
   - Automated Stage 5 Verifier (`scripts/stage5_verify.ts` via `npm run stage5:verify`) passing 100% across all 12 validation criteria.
+- Stage 6 Delivered (`packages/verifier` and `packages/recovery-engine`):
+  - `@runsafe/verifier` package created:
+    - Domain schemas: `VerificationStatus` (`PASS`, `FAIL`, `UNKNOWN`), `ProbeEvaluation`, `VerificationRun`, `VerificationResult`.
+    - Pure, deterministic Verifier Engine enforcing negative evidence recording and all-must-pass invariant.
+    - Multi-sample live probes: `SYNTHETIC_ORDER` (probes multi-replica round-robin up to 3 times to guarantee catching any failing replica), `ERROR_RATE_DELTA`, `INGRESS_HEALTH`, `DB_LATENCY`, `REPLICA_HEALTH`.
+    - SQLite persistence in `verification_runs` table with probe payload JSON and structured evaluation logs.
+  - `@runsafe/recovery-engine` package created:
+    - Incident state machine: `DETECTED` -> `INVESTIGATING` -> `REMEDIATING` -> `VERIFYING` -> `VERIFIED_RECOVERY` / `ESCALATED` / `ABSTAINED`.
+    - Incident Repository with full lifecycle CRUD, atomic state transitions, and chronological event ledger in `incident_events` table.
+    - Recovery Orchestrator (`RecoveryOrchestrator`):
+      - Proposes Proof-Carrying Actions based on active contract step.
+      - Dispatches to Safety Kernel for invariant evaluation.
+      - Automatically executes `AUTO_ALLOW` low-risk reversible steps.
+      - Pauses execution and creates approval requests for `APPROVAL_REQUIRED` high-risk steps (`rollback_canary`, `rollback_full`).
+      - Single-use execution token issuance and atomic execution claiming.
+      - Post-action verification via Independent Verifier:
+        - Non-declaration invariant: technical success (`exitCode === 0`) does NOT declare recovery.
+        - Verifier failure causes branch progression to `onFailure` step, recording negative evidence.
+        - Verifier pass causes branch progression to `onSuccess` step or `VERIFIED_RECOVERY` resolution.
+      - Baseline evidence gathering for steps lacking prior telemetry.
+  - SQLite persistence expanded to 12 tables: added `incidents`, `verification_runs`, and `incident_events`.
+  - Fastify Control Plane upgraded with incident REST routes in `apps/control-plane/src/routes/incidents.ts`:
+    - `POST /api/v1/incidents`: detects/opens incident.
+    - `GET /api/v1/incidents`: lists incidents with optional status and service filters.
+    - `GET /api/v1/incidents/:id`: retrieves incident record.
+    - `GET /api/v1/incidents/:id/events`: retrieves chronological event audit trail.
+  - Automated Stage 6 Verifier (`scripts/stage6_verify.ts` via `npm run stage6:verify`) passing 100% across all 10 validation criteria.
+- Stage 7 Delivered (Bad Deployment Autonomous Recovery Hero):
+  - Hero Scenario 2 fully automated and validated end-to-end against live controlled infrastructure:
+    - Fault Injection: Upgrades `checkout-api-2` to faulty `v2.0.0` (deceptive failure: shallow `/health` returns HTTP 200 OK, but business `/orders` transactions fail with HTTP 500 schema lock constraint).
+    - Step 1: Ingress Observation confirms fleet degradation.
+    - Step 2: Log Extraction captures schema lock exception excerpts.
+    - Step 3: Database Health Check verifies PostgreSQL is healthy and responsive (< 50ms).
+    - Step 4: Autonomous Reversible Step: Safety Kernel auto-approves `restart_service(checkout-api-2)` as `LOW_RISK_REVERSIBLE`. Action executes with technical exit code 0.
+    - Invariant Proven: Independent Verifier runs synthetic transaction probe, detects HTTP 500 failure, marks verification `FAIL`, and records negative evidence. Incident remains OPEN.
+    - Step 5: High-Risk Step: Agent proposes `rollback_canary(checkout-api-2, v1.0.0)`. Safety Kernel strictly pauses for human operator approval (`APPROVAL_REQUIRED`).
+    - Operator Approval: Cryptographically verified digital token authorizes canary rollback.
+    - Verification: Replica 2 rolled back to `v1.0.0`, error rate drops to 0%.
+    - Step 6: Full Fleet Rollback: Agent proposes `rollback_full` to ensure fleet-wide consistency.
+    - Step 7: Final Synthetic Verification: Independent Verifier executes end-to-end synthetic ACID orders through Nginx ingress. All probes PASS.
+    - Resolution: Incident transitions to `VERIFIED_RECOVERY` with complete 54-event chronological audit trail.
+  - Stage 7 Verification script (`scripts/stage7_verify.ts` via `npm run stage7:verify`) executed across 3 consecutive cycles: 39/39 checks passed 100%.
+  - Complete monorepo unit & integration test suite passing: 89/89 tests across 13 test suites (`npm test`).
+  - Zero TypeScript compiler errors (`npx tsc --noEmit` clean).
 
 ## Blocked on Organizer Provisioning
-- Organizer OpenAI Model Provider: Awaiting `OPENAI_API_KEY` (arrival scheduled for 2:00 PM). Local Qwen3 4B via Ollama actively verified as working fallback.
-- Daytona Sandbox Provider: Awaiting `DAYTONA_API_KEY`.
-- Organizer AWS Account Credentials: Awaiting AWS credentials / EC2 host. Local Docker environment is 100% verified.
+- Organizer OpenAI Model Provider: Local Qwen3 4B via Ollama actively verified as working fallback.
+- Daytona Sandbox Provider: Local isolated Python subprocess verified as working fallback.
+- Organizer AWS Account Credentials: Local multi-container Docker environment (Nginx, 2x replicas, Postgres) verified 100%.
 
 ## Pending
-- 2:00 PM: Activate OpenAI API key in TrueForge and verify primary model reasoning.
+- Stage 8: Frontend UI / Command Center (Next.js 15, Minimalist Monochrome UI, live SSE stream, approval modal, incident timeline, live verifier status).
+- Stage 9: Live Demo Rehearsal & Presentation Polish (Scenarios 1, 2, 3 video recording & presentation slide deck).
 
-- Stage 3: TrueForge Agent Core & Model Routing.
-- Stage 4: Typed MCP Tool Layer.
-- Stage 5: Runbook Compiler & Recovery Contracts.
-- Stage 6: Deterministic Safety Kernel.
-- Stage 7: Incident & Evidence Engine.
-- Stage 8: TrueForge Sandbox Execution.
-- Stage 9: Proof-Carrying Autonomous Recovery Orchestrator.
-- Stage 10: Progressive / Canary Recovery & Rollback.
-- Stage 11: Independent Verification & Confidence Abstention.
-- Stage 12: Runbook CI / Continuous Recovery Rehearsal.
-- Stage 13: Learning, Drift & Audit Intelligence.
-- Stage 14: Product UI / Command Center (Next.js, React Flow, Recharts, live SSE/WebSocket).
-- Stage 15: End-to-End Validation & Demo Hardening (Scenarios 1, 2, 3).
 
 ## Current Architecture Reality
 - Repository initialized on Windows 11 host (HP Victus: AMD Ryzen 5000 series, 24 GB RAM, NVIDIA RTX 3050 Laptop GPU, 4GB VRAM).

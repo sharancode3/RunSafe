@@ -405,6 +405,92 @@ ollama -v    # Expected: 0.34+
 # Start TrueForge local daemon on port 8790
 npx @truefoundry/trueforge@latest
 
-# Reset demo workload to healthy baseline
-npm run demo:reset
+# Reset demo workload to healthy v1.0.0 baseline
+npm run env:reset
 ```
+
+---
+
+## Autonomous Recovery Hero: Bad Deployment Scenario
+
+RunSafe features an end-to-end autonomous recovery hero demonstration proving the core architectural axiom:
+**"AI provides intelligence. Safety Kernel provides authority. Independent Verifier provides truth."**
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Operator as Human SRE Operator
+    participant Infra as Docker Infrastructure (Nginx, Replicas, Postgres)
+    participant Agent as TrueForge Agent + OpenAI
+    participant Engine as Recovery Engine (State Machine)
+    participant SK as Safety Kernel (Deterministic Authority)
+    participant Verifier as Independent Objective Verifier
+
+    Note over Infra: Fault Injected: checkout-api-2 upgraded to faulty v2.0.0<br/>(Shallow /health is 200 OK, but /orders fails with HTTP 500 schema lock)
+    Infra->>Engine: Ingress Anomaly Detected -> Open Incident (DETECTED)
+    Engine->>Agent: Step 1: Observe Ingress -> Collect Fleet Evidence
+    Engine->>Agent: Step 2: Extract Logs -> Capture Schema Lock Exception
+    Engine->>Agent: Step 3: Check DB -> Confirm PostgreSQL Healthy (< 50ms)
+    
+    rect rgb(30, 30, 35)
+        Note over Engine,SK: REVERSIBLE STEP: Autonomous Execution
+        Engine->>SK: Propose PCA: restart_service(checkout-api-2)
+        SK->>SK: Invariant Check: LOW_RISK_REVERSIBLE + Preconditions Matched
+        SK-->>Engine: Decision: AUTO_ALLOW
+        Engine->>Infra: Restart container (Technical Exit Code 0)
+        Engine->>Verifier: Run Independent Health & Synthetic Probes
+        Verifier->>Infra: POST /orders (Synthetic ACID transaction)
+        Infra-->>Verifier: HTTP 500 (Schema lock persists!)
+        Verifier-->>Engine: Status: FAIL (Negative Evidence Recorded)
+        Note over Engine: Invariant Proven: Exit Code 0 is NOT Recovery!<br/>Incident remains OPEN -> Branch to onFailure (STEP_5_ROLLBACK_CANARY)
+    end
+
+    rect rgb(45, 30, 30)
+        Note over Engine,Operator: DESTRUCTIVE / HIGH-RISK STEP: Human Gate
+        Engine->>SK: Propose PCA: rollback_canary(checkout-api-2, v1.0.0)
+        SK->>SK: Invariant Check: HIGH_RISK -> Enforce Approval Policy
+        SK-->>Engine: Decision: APPROVAL_REQUIRED
+        Engine->>Operator: Checkpoint Paused: Operator Sign-off Requested
+        Operator->>Engine: Authorize PCA (Cryptographically Signed Token)
+        Engine->>Infra: Roll back replica 2 to v1.0.0
+        Engine->>Verifier: Run Probes on Canary
+        Verifier-->>Engine: Status: PASS (0% Error Rate on Replica 2)
+    end
+
+    Engine->>Infra: Step 6: Roll back full fleet to v1.0.0
+    Engine->>Verifier: Step 7: Final Synthetic Verification
+    Verifier->>Infra: Multi-sample Synthetic Orders through Nginx
+    Infra-->>Verifier: HTTP 201 Created (All DB Transactions Committed)
+    Verifier-->>Engine: Status: PASS (All Probes Satisfied)
+    Engine->>Engine: Incident Transition -> VERIFIED_RECOVERY
+    Note over Engine,Operator: Incident Resolved with Complete 54-Event Audit Trail
+```
+
+To execute the autonomous recovery hero across 3 consecutive automated cycles:
+```bash
+npm run stage7:verify
+```
+
+---
+
+## Test Suites & Stage Verifications
+
+RunSafe maintains a 100% green verification barrier across every stage of the challenge:
+
+```bash
+# 1. Monorepo Unit & Integration Tests (89 tests across 13 suites)
+npm test
+
+# 2. Complete Type Safety Check
+npx tsc --noEmit
+
+# 3. Stage-by-Stage Verification Scripts
+npm run stage1:verify   # Stage 1: Foundation, contracts, ports, fastify server
+npm run stage2:verify   # Stage 2: Controlled multi-container infrastructure
+npm run stage3:verify   # Stage 3: Typed MCP server & TrueForge human checkpoints
+npm run stage4:verify   # Stage 4: Runbook compiler, recovery contracts & evidence engine
+npm run stage5:verify   # Stage 5: Proof-carrying actions & deterministic safety kernel
+npm run stage6:verify   # Stage 6: Independent objective verifier & recovery engine
+npm run stage7:verify   # Stage 7: Bad deployment autonomous recovery hero (3 cycles)
+```
+

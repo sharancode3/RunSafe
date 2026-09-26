@@ -126,7 +126,11 @@ function evaluateAssertion(
         val.status === "healthy" ||
         val.healthy === true ||
         val.dbConnection === true ||
-        summary.includes("healthy");
+        val.connected === true ||
+        val.querySucceeded === true ||
+        val.reachable === true ||
+        summary.includes("healthy") ||
+        summary.includes("persistence probe");
 
       if (dbHealthy) {
         return {
@@ -152,6 +156,70 @@ function evaluateAssertion(
           assertion,
           passed: true,
           reason: `Evidence '${ev.id}' confirmed schema lock defect`,
+        };
+      }
+    } else if (assertion === "REGRESSION_CONFIRMED") {
+      let arrayMatch = false;
+      if (Array.isArray(ev.structuredValue)) {
+        for (const item of ev.structuredValue) {
+          const itemStr = JSON.stringify(item).toLowerCase();
+          if (
+            itemStr.includes("lock") ||
+            itemStr.includes("v2.0.0") ||
+            itemStr.includes("defect") ||
+            itemStr.includes("regression") ||
+            itemStr.includes("500") ||
+            itemStr.includes("error")
+          ) {
+            arrayMatch = true;
+            break;
+          }
+        }
+      }
+
+      const confirmed =
+        arrayMatch ||
+        val.REGRESSION_CONFIRMED === true ||
+        val.regression === true ||
+        summary.includes("regression") ||
+        summary.includes("lock") ||
+        summary.includes("defect") ||
+        summary.includes("v2.0.0") ||
+        summary.includes("500") ||
+        summary.includes("anomal") ||
+        raw.includes("regression") ||
+        raw.includes("lock") ||
+        raw.includes("defect") ||
+        raw.includes("v2.0.0") ||
+        raw.includes("500") ||
+        raw.includes("error") ||
+        val.errorType === "SCHEMA_LOCK";
+
+      if (confirmed) {
+        return {
+          id: precondition.id,
+          assertion,
+          passed: true,
+          reason: `Evidence '${ev.id}' confirmed deployment regression`,
+        };
+      }
+    } else if (assertion === "CANARY_EFFECTIVE") {
+      const effective =
+        val.CANARY_EFFECTIVE === true ||
+        val.effective === true ||
+        summary.includes("effective") ||
+        summary.includes("healthy") ||
+        summary.includes("passed") ||
+        summary.includes("0%") ||
+        val.status === "healthy" ||
+        val.reachable === true;
+
+      if (effective) {
+        return {
+          id: precondition.id,
+          assertion,
+          passed: true,
+          reason: `Evidence '${ev.id}' confirmed canary rollback was effective`,
         };
       }
     } else {

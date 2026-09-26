@@ -61,10 +61,10 @@ graph TD
 - Target: checkout-api-1
 - Risk: LOW_RISK_REVERSIBLE
 - Reversible: true
-- Approval: true
+- Approval: false
 - On Success: STEP_7_VERIFY_SYNTHETIC
 - On Failure: STEP_5_ROLLBACK_CANARY
-- Description: Attempt low-risk container restart for replica 1 if the process crashed or hung.
+- Description: Attempt low-risk container restart for replica 1 after confirming database health.
 
 ### Step 5: Isolated Canary Rollback (STEP_5_ROLLBACK_CANARY)
 - Tool: rollback_canary
@@ -188,25 +188,25 @@ graph TD
       "targetResource": "checkout-api-1",
       "riskLevel": "LOW_RISK_REVERSIBLE",
       "isReversible": true,
-      "requiresApproval": true,
+      "requiresApproval": false,
       "preconditions": [
         {
-          "id": "PRE_REPLICA_CRASHED",
-          "description": "Replica status degraded or unhealthy",
-          "evidenceType": "SERVICE_HEALTH",
-          "assertion": "STATUS_DEGRADED"
+          "id": "PRE_DB_HEALTHY",
+          "description": "Database persistence confirmed healthy before process restart",
+          "evidenceType": "DATABASE_HEALTH",
+          "assertion": "DB_HEALTHY"
         }
       ],
       "successCriteria": [
         {
-          "probeType": "REPLICA_HEALTH",
-          "targetResource": "checkout-api-1",
+          "probeType": "SYNTHETIC_ORDER",
+          "targetResource": "checkout-service",
           "expected": "200",
-          "description": "Replica 1 returns 200 OK after restart"
+          "description": "Synthetic order must succeed through ingress after restart"
         }
       ],
       "evidenceRequirements": [
-        { "evidenceType": "SERVICE_HEALTH", "minFreshnessSeconds": 60, "mandatory": true }
+        { "evidenceType": "DATABASE_HEALTH", "minFreshnessSeconds": 120, "mandatory": true }
       ],
       "onSuccess": "STEP_7_VERIFY_SYNTHETIC",
       "onFailure": "STEP_5_ROLLBACK_CANARY"
@@ -238,7 +238,7 @@ graph TD
         }
       ],
       "evidenceRequirements": [
-        { "evidenceType": "DEPLOYMENT_STATE", "minFreshnessSeconds": 120, "mandatory": true }
+        { "evidenceType": "RECENT_LOGS", "minFreshnessSeconds": 120, "mandatory": true }
       ],
       "onSuccess": "STEP_6_ROLLBACK_FULL",
       "onFailure": "ESCALATED"
@@ -257,7 +257,7 @@ graph TD
         {
           "id": "PRE_CANARY_PROVEN",
           "description": "Canary rollback verified effective",
-          "evidenceType": "SERVICE_HEALTH",
+          "evidenceType": "METRICS",
           "assertion": "CANARY_EFFECTIVE"
         }
       ],
@@ -269,7 +269,9 @@ graph TD
           "description": "Ingress healthy across all replicas"
         }
       ],
-      "evidenceRequirements": [],
+      "evidenceRequirements": [
+        { "evidenceType": "METRICS", "minFreshnessSeconds": 120, "mandatory": true }
+      ],
       "onSuccess": "STEP_7_VERIFY_SYNTHETIC",
       "onFailure": "ESCALATED"
     },

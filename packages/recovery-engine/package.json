@@ -1,0 +1,24 @@
+{
+  "name": "@runsafe/recovery-engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc --build"
+  },
+  "dependencies": {
+    "@runsafe/actions": "*",
+    "@runsafe/evidence": "*",
+    "@runsafe/infrastructure-adapter": "*",
+    "@runsafe/runbooks": "*",
+    "@runsafe/safety-kernel": "*",
+    "@runsafe/shared": "*",
+    "@runsafe/verifier": "*",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  }
+}
