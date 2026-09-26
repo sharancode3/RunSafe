@@ -234,7 +234,7 @@ flowchart TD
     subgraph EvidenceEngine["Evidence Processing & Provenance Store"]
         Norm["1. Telemetry Normalizer & Timestamp Assigner"]
         Sandbox["2. TrueForge Sandbox Parser\n(analyze_logs.py -> NullPointerException extracted)"]
-        EvStore[("Evidence Records (runsafe.db)\nImmutable Records with Evidence IDs:\n[EV-001], [EV-002], [EV-003], [EV-004]")]
+        EvStore[("Evidence Records (runsafe.db)\nImmutable Records with Evidence IDs:\nEV-001, EV-002, EV-003, EV-004")]
         
         RawObservations --> Norm --> EvStore
         P_LOGS --> Sandbox --> EvStore
