@@ -42,10 +42,10 @@ export class ActionRepository {
       action.confidenceScore,
       JSON.stringify(action.supportingEvidenceIds),
       action.riskTier,
-      action.blastRadius,
+      typeof action.blastRadius === "object" ? JSON.stringify(action.blastRadius) : String(action.blastRadius ?? "SINGLE_REPLICA"),
       action.isReversible ? 1 : 0,
       action.rollbackProcedure ?? null,
-      JSON.stringify(action.verificationCriteria),
+      JSON.stringify(action.verificationCriteria ?? []),
       action.status,
       action.createdAt,
       action.updatedAt

@@ -171,10 +171,11 @@ All Stage 1–9 automated verifiers are 100% green; 93 unit and integration test
 
 - Stage 8: Runbook CI, Autonomous Crash Recovery, Confidence Abstention (10/10 verified).
 - Stage 9: Minimalist Monochrome Product Frontend UI (7/7 verified, running on :3001).
-- Stage 10: Live Demo Walkthrough Guide & Hackathon Submission Package (`docs/10_DEMO_WALKTHROUGH_SCRIPT.md`).
+- Stage 10: Full Integration & Reliability Hardening (8/8 verified, feature freeze, strict safety boundaries, 101/101 tests green).
+- Stage 11: Demo Readiness & Submission Package (8/8 verified, preflight 9/9, isolated rehearsals, presentation guide in `docs/10_DEMO_WALKTHROUGH_SCRIPT.md`).
 
 ## Pending
-- None. System is 100% verified, running live, and ready for video recording and judging review.
+- None. All stages 1–11 are 100% verified, running live, and ready for video recording, judging review, and submission.
 
 
 ## Current Architecture Reality

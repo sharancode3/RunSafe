@@ -551,17 +551,59 @@ The RunSafe product UI is an architectural, editorial monochrome command environ
 # 1. Build production bundle
 npm run web:build
 
-# 2. Start production server on port 3000
+# 2. Start production server on port 3001
 npm run web:start
 
 # Or run development server:
 npm run web:dev
 ```
-Open **[http://localhost:3000](http://localhost:3000)** in your browser.
+Open **[http://localhost:3001](http://localhost:3001)** in your browser.
 
 To verify the Stage 9 UI build and API integrations:
 ```bash
 npm run stage9:verify
+```
+
+---
+
+## Stage 10: Full Integration & Reliability Hardening
+
+Stage 10 represents a strict **feature freeze** dedicated to end-to-end integration and reliability hardening across all architectural boundaries:
+
+1. **Anti-Tamper Cryptographic Fingerprinting:** Every Proof-Carrying Action hashes its exact payload (`actionId`, `stepId`, `toolName`, `arguments`, `blastRadius`, `supportingEvidenceIds`). Any in-flight modification causes an immediate fail-closed `FINGERPRINT_TAMPERED` block.
+2. **Single-Use Authorization & Replay Defense:** The `ExecutionAuthorizer` uses atomic SQLite state transitions (`PROPOSED` / `APPROVED` $\to$ `EXECUTING`) to issue single-use execution tokens. Repeated calls, double-clicks, or replay attempts are deterministically rejected with `DUPLICATE_EXECUTION_BLOCKED`.
+3. **Strict Target & Environment Binding:** Operations are strictly bound to `LOCAL` or `AWS`. Unknown environments throw `UNKNOWN_ENVIRONMENT`, and unconfigured AWS targets throw `ADAPTER_NOT_CONFIGURED` without silent fallback to local targets.
+4. **Capability Mode Security Boundary:** Rehearsal-only fault injection tools (`inject_bad_deployment`, `inject_process_crash`, `inject_ambiguous_failure`) are blocked by `RULE_TOOL_REGISTRY_CHECK` when operating in `RECOVERY` mode.
+5. **Epistemic Abstention Gate (FR-033, TR-011):** Diagnostic confidence $< 0.70$ halts autonomous mutation with `CONFIDENCE_BELOW_THRESHOLD`, recording `INCIDENT_ABSTAINED` and dispatching **zero mutations** to infrastructure.
+6. **Independent Verifier Consensus:** A partial probe pass is never sufficient. The verifier requires unanimous consensus across all defined criteria before declaring recovery.
+
+To run Stage 10 verification:
+```bash
+npm run stage10:verify
+```
+
+---
+
+## Stage 11: Demo Readiness & Submission Package
+
+Stage 11 guarantees a truthful, reproducible demonstration and submission package:
+
+1. **Truthful Preflight System Inspector:**
+   ```bash
+   npm run preflight
+   ```
+   Inspects 9 live subsystems (Target Environment, Fastify API, SQLite Schema, RunSafe MCP Server, TrueForge Runtime, Next.js UI, Nginx Ingress, API Replicas, PostgreSQL) and verifies a clean v1.0.0 baseline.
+
+2. **Live Presentation Runbook:**
+   A complete script for screen recording and live judging is documented in [`docs/10_DEMO_WALKTHROUGH_SCRIPT.md`](docs/10_DEMO_WALKTHROUGH_SCRIPT.md), covering:
+   - Scenario 1: Autonomous Process Crash (<30s).
+   - Scenario 2: Bad Deployment Canary Rollback Hero with Human Approval Checkpoint & Synthetic Order Verification.
+   - Scenario 3: Ambiguous Telemetry with Confidence Abstention & Zero Mutations Dispatched.
+   - Runbook CI: 100% Staging Recovery Coverage gauge.
+
+To run Stage 11 demo readiness verification:
+```bash
+npm run stage11:verify
 ```
 
 ---
@@ -571,14 +613,17 @@ npm run stage9:verify
 RunSafe maintains a 100% green verification barrier across every stage of the challenge:
 
 ```bash
-# 1. Monorepo Unit & Integration Tests (93 tests across 15 suites)
+# 1. Monorepo Unit & Integration Tests (101 tests across 16 suites)
 npm test
 
-# 2. Complete Type Safety Check (Monorepo & Frontend)
+# 2. System Diagnostic Preflight Check (9/9 subsystems verified)
+npm run preflight
+
+# 3. Complete Type Safety Check (Monorepo & Frontend)
 npx tsc --noEmit
 npm run build --workspace=@runsafe/web
 
-# 3. Stage-by-Stage Verification Scripts
+# 4. Stage-by-Stage Verification Scripts
 npm run stage1:verify   # Stage 1: Foundation, contracts, ports, fastify server
 npm run stage2:verify   # Stage 2: Controlled multi-container infrastructure
 npm run stage3:verify   # Stage 3: Typed MCP server & TrueForge human checkpoints
@@ -588,6 +633,8 @@ npm run stage6:verify   # Stage 6: Independent objective verifier & recovery eng
 npm run stage7:verify   # Stage 7: Bad deployment autonomous recovery hero (3 cycles)
 npm run stage8:verify   # Stage 8: Runbook CI, crash recovery & confidence abstention
 npm run stage9:verify   # Stage 9: Product frontend UI & control plane integration
+npm run stage10:verify  # Stage 10: Full integration & reliability hardening
+npm run stage11:verify  # Stage 11: Demo readiness & submission package
 ```
 
 
