@@ -1,13 +1,78 @@
-# RunSafe — Verified Autonomous Incident Recovery / AI SRE Control Plane
+# RunSafe — Verified Autonomous Runbook Executor for Safe Incident Recovery
 
 [![Hackathon](https://img.shields.io/badge/Hackathon-Agents%20That%20Act%3A%20TrueFoundry%20%C3%97%20Polaris-black?style=for-the-badge)](https://truefoundry.com)
+[![Challenge](https://img.shields.io/badge/Challenge-Runbook%20Executor%20(Agents%20That%20Act)-black?style=for-the-badge)](docs/RUNSAFE_PROJECT_CONTEXT.md)
 [![Runtime](https://img.shields.io/badge/Runtime-TrueForge%20v0.2.1-black?style=for-the-badge)](https://github.com/truefoundry/trueforge)
 [![Architecture](https://img.shields.io/badge/Architecture-Safety%20Kernel%20%2B%20Independent%20Verifier-black?style=for-the-badge)](docs/architecture/09_SYSTEM_INFRASTRUCTURE_ARCHITECTURE.md)
 [![Design](https://img.shields.io/badge/Design%20System-Minimalist%20Monochrome-black?style=for-the-badge)](docs/06_UI_UX_SPECIFICATION.md)
 
-> **RunSafe** is an industry-grade, autonomous incident recovery and AI SRE control plane engineered for the **"Agents That Act: TrueFoundry × Polaris Hackathon"** (Bengaluru, 26 September 2026).
+> **RunSafe** is a TrueForge-powered autonomous **Runbook Executor** built for the **"Agents That Act: TrueFoundry × Polaris Hackathon"** (Bengaluru, 26 September 2026).
 > 
-> Unlike conversational chatbots, generic DevOps copilots, or unrestricted infrastructure shell scripts, RunSafe is a **closed-loop autonomous system** that executes real operational runbooks on real cloud infrastructure with provable, deterministic safety guarantees.
+> It executes human-written operational recovery runbooks step by step against real controlled infrastructure, automatically performs permitted reversible actions, pauses before destructive/high-risk actions for human approval, and independently verifies whether recovery actually succeeded.
+> 
+> *Engineered as an industry-grade AI SRE Control Plane with provable, deterministic safety guarantees.*
+
+---
+
+## Official Challenge Alignment: Runbook Executor (Agents That Act)
+
+RunSafe directly answers the official hackathon challenge: **Runbook Executor** under the theme **"Agents That Act: Build agents that act, not ones that just answer."**
+
+| Official Requirement | How RunSafe Fulfills It | Architectural Enforcement |
+| :--- | :--- | :--- |
+| **"Execute a human-written runbook"** | Converts human-authored Markdown operational runbooks into versioned, machine-enforceable **Recovery Contracts** | Human Markdown in `runbooks/` → SQLite `runbook_versions` → Zod-validated `RecoveryContract` |
+| **"step by step"** | Progresses deterministically through explicit runbook steps, preconditions, branches, and fallbacks | Each step defines tool, arguments, target resource, required evidence, success/failure transitions |
+| **"handling reversible steps automatically"** | Automatically executes safe, reversible recovery actions without waiting for human sign-off | Pure TypeScript **Safety Kernel** marks `LOW_RISK_REVERSIBLE` actions (e.g. process restart) as `AUTO_ALLOW` |
+| **"Reaches: Your infrastructure"** | Dispatches actions to real multi-replica container infrastructure with live PostgreSQL transactions | Typed MCP tools → Infrastructure Adapter (`LocalDockerAdapter` / `AwsInfrastructureAdapter`) |
+| **"Approval required: Every destructive step"** | Halts execution before high-risk or destructive actions to demand explicit human authorization | Mandatory human approval checkpoint on `HIGH_RISK` and `DESTRUCTIVE` tools (`rollback_canary`, `rollback_full`) |
+
+### The Runbook Execution Conceptual Hierarchy
+
+```mermaid
+flowchart TD
+    RB["1. Human-Written Runbook\n(Canonical Operational Intent)"] --> RC["2. Validated Recovery Contract\n(Zod-Enforced State Machine)"]
+    RC --> EV["3. Real Infrastructure Evidence\n(Normalized Telemetry Store)"]
+    EV --> TF["4. TrueForge + OpenAI Reasoning\n(Diagnoses & Step Selection)"]
+    TF --> STEP["5. Current Runbook Step\n(Step ID, Preconditions, Actions)"]
+    STEP --> PCA["6. Proof-Carrying Action (PCA)\n(Cryptographic Fingerprint & Rationale)"]
+    PCA --> SK{"7. Deterministic Safety Kernel\n(Authority & Invariant Rules)"}
+    
+    SK -->|LOW_RISK_REVERSIBLE| AUTO["8a. Auto-Execute Reversible Step"]
+    SK -->|HIGH_RISK / DESTRUCTIVE| APPR["8b. Human Approval Gate\n(Operator Signs Digital Token)"]
+    
+    AUTO --> MCP["9. Typed MCP Tool Dispatch\n(Zero Arbitrary Shell Execution)"]
+    APPR -->|Approved| MCP
+    APPR -->|Rejected| FALLBACK["Fallback Branch in Runbook"]
+    
+    MCP --> INFRA["10. Real Target Infrastructure\n(Docker / AWS SSM)"]
+    INFRA --> VERIF{"11. Independent Objective Verifier\n(Multi-Probe & Synthetic Order Tx)"}
+    
+    VERIF -->|PASS: Recovery Proven| NEXT["Next Runbook Step / Resolved"]
+    VERIF -->|FAIL: Defect Persists| REPLAN["Negative Evidence -> Runbook Branch"]
+
+    classDef rb fill:#18181b,stroke:#a1a1aa,stroke-width:1px,color:#fff;
+    classDef gate fill:#27272a,stroke:#e4e4e7,stroke-width:2px,color:#fff;
+    classDef pass fill:#000000,stroke:#ffffff,stroke-width:2px,color:#fff;
+
+    class RB,RC,EV,TF,STEP,PCA,MCP,INFRA,NEXT,REPLAN,FALLBACK rb;
+    class SK,APPR gate;
+    class AUTO,VERIF pass;
+```
+
+### Architectural Innovations as Runbook Executor Enhancements
+
+RunSafe’s advanced subsystems are innovations that make the **Runbook Executor** safer, smarter, verifiable, and genuinely production-grade:
+
+* **Recovery Contracts:** Convert human runbooks into machine-executable graphs without sacrificing human intent or introducing ambiguity.
+* **Evidence Engine:** Grounds runbook step selection in real, normalized telemetry ($\le 120\text{s}$ freshness) before mutations are proposed.
+* **Proof-Carrying Actions (PCAs):** Make every mutation self-justifying by explicitly declaring runbook step ID, justification, target resource, blast radius, rollback procedure, and verification criteria.
+* **Deterministic Safety Kernel:** Provides an immutable, fail-closed authority gate outside the LLM that decides whether a runbook step may auto-execute or must wait for human sign-off.
+* **TrueForge Diagnostic Sandbox:** Executes generated Python diagnostic scripts (`analyze_logs.py`) in isolated, zero-network environments without granting the LLM arbitrary shell access to infrastructure.
+* **Progressive Canary Remediation:** Implements fine-grained runbook rollback steps on single replicas with comparative traffic splitting to minimize blast radius.
+* **Independent Objective Verifier:** Refuses to trust command exit codes, demanding multi-probe telemetry checks and real synthetic business transactions (`POST /orders`) to prove recovery.
+* **Runbook CI:** Rehearses the exact same recovery runbooks in pre-production by injecting controlled faults, validating that the runbook remains effective before real incidents occur.
+* **Confidence Abstention:** When evidence is conflicting or preconditions cannot be established, RunSafe safely pauses and escalates rather than taking reckless blind action.
+* **Runbook Drift Proposals:** Synthesizes evidence-backed improvements to the runbook after verified recoveries, presenting pull-request proposals for human SRE review.
 
 ---
 

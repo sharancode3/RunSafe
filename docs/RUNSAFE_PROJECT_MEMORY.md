@@ -1,9 +1,18 @@
 # RunSafe Project Memory
 
+## Official Challenge Definition & Primary Positioning
+**Problem Statement:** Runbook Executor  
+**Hackathon Theme:** Agents That Act (TrueFoundry × Polaris Hackathon, Bengaluru, 26 September 2026)  
+**Primary Product Definition:**  
+> **RunSafe — Verified Autonomous Runbook Executor for Safe Incident Recovery**  
+> *A TrueForge-powered agent that executes human-written recovery runbooks against real infrastructure, automatically performs safe reversible steps, pauses destructive/high-risk steps for human approval, and independently verifies whether recovery succeeded.*  
+*(Category descriptor: AI SRE Control Plane)*
+
 ## Current Stage
 Stage 4: Runbook, Recovery Contract & Evidence Engine (Completed & Verified locally; automated Stage 4 verification 100% green; 57 unit tests passing).
 
 ## Completed
+- Official Problem Statement Alignment Audited & Locked: RunSafe is positioned unmistakably as a **Runbook Executor** first. All architectural subsystems (Recovery Contracts, Evidence Engine, Proof-Carrying Actions, Safety Kernel, TrueForge Sandbox, Progressive Canary Rollback, Independent Verifier, Runbook CI) are explicitly structured as capabilities that enhance and guarantee safe runbook execution.
 - Canonical Master Project Context initialized and locked in `docs/RUNSAFE_PROJECT_CONTEXT.md` (Read-Only source of truth).
 - Living implementation memory established in `docs/RUNSAFE_PROJECT_MEMORY.md`.
 - Git repository initialized on `main` branch with remote: `https://github.com/sharancode3/RunSafe.git`.
