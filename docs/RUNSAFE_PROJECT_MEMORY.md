@@ -1,13 +1,13 @@
 # RunSafe Project Memory
 
 ## Current Stage
-Stage 1: Foundation & TrueForge/OpenAI Runtime Proof (Code Complete; Verified via automated test suite; BLOCKED on external organizer keys for hosted OpenAI & Daytona sandbox).
+Stage 2: Real Controlled Infrastructure (Completed & Verified locally; AWS deployment artifacts prepared, awaiting organizer AWS account credentials).
 
 ## Completed
 - Canonical Master Project Context initialized and locked in `docs/RUNSAFE_PROJECT_CONTEXT.md` (Read-Only source of truth).
 - Living implementation memory established in `docs/RUNSAFE_PROJECT_MEMORY.md`.
 - Git repository initialized on `main` branch with remote: `https://github.com/sharancode3/RunSafe.git`.
-- Strict `.gitignore` created to prevent leaking secrets, node_modules, and environment files.
+- Strict `.gitignore` created to prevent leaking secrets, node_modules, environment files, and large traffic logs.
 - Authoritative Product Requirements Document (PRD) completed and frozen in `docs/03_PRD.md` (IDs `FR-001` through `FR-049`, `NFR-001` through `NFR-012`).
 - Authoritative Technical Requirements Document (TRD) completed and frozen in `docs/04_TRD.md` (IDs `TR-001` through `TR-016`, pipeline architectures, hardware budget, and scenario criteria).
 - Authoritative Workflow & Data Flow Specification completed and frozen in `docs/05_WORKFLOW_AND_DATA_FLOW.md` (Workflows `WF-INC-001` through `WF-SSE-001`, sequence diagrams, state matrices, and hero flow traces).
@@ -17,23 +17,49 @@ Stage 1: Foundation & TrueForge/OpenAI Runtime Proof (Code Complete; Verified vi
 - Authoritative Agent, TrueForge & Safety Architecture Specification completed and frozen in `docs/architecture/10_AGENT_TRUEFORGE_SAFETY_ARCHITECTURE.md` (Saved agent definition in TrueForge on localhost:8790, programmatic Next.js/Fastify integration, typed MCP tool layer, TrueForge isolated Python sandbox, deterministic Safety Kernel outside LLM, immutable Proof-Carrying Actions with SHA-256 fingerprinting, human approval gating, and independent objective verifier).
 - Authoritative Incident Recovery & Reliability Architecture Specification completed and frozen in `docs/architecture/11_INCIDENT_RECOVERY_RELIABILITY_ARCHITECTURE.md` (Formal 12-state Incident and 15-state Action lifecycles, transactional Recovery Steps, evidence sufficiency gating, progressive single-replica canary remediation, multi-metric and synthetic checkout verification, confidence-based abstention, Runbook CI rehearsal isolation, and runbook drift proposals).
 - Verified `@truefoundry/trueforge` CLI (v0.2.1) operational on default port `8790` (standalone SQLite mode, local network policy configured for localhost MCP/model bridging).
-- TypeScript monorepo initialized with npm workspaces: `packages/shared`, `packages/mcp-server`, `packages/trueforge-client`, `apps/control-plane`.
-- Shared runtime schemas and Zod contracts created: `RuntimeStatusSchema`, `GuardedNoopInputSchema`, `GuardedNoopOutputSchema`, `ReadinessReportSchema`, `RunSafeEventEnvelopeSchema`.
+- TypeScript monorepo initialized with npm workspaces: `packages/shared`, `packages/mcp-server`, `packages/trueforge-client`, `apps/control-plane`, `apps/demo-workload/checkout-api`.
+- Shared runtime schemas and Zod contracts created: `RuntimeStatusSchema`, `GuardedNoopInputSchema`, `GuardedNoopOutputSchema`, `ReadinessReportSchema`, `RunSafeEventEnvelopeSchema`, `CheckoutRequestSchema`, `CheckoutResponseSchema`, `WorkloadHealthSchema`, `WorkloadVersionSchema`, `WorkloadMetricsSchema`, `TrafficRecordSchema`.
 - RunSafe MCP server implemented (`@runsafe/mcp-server` on `http://127.0.0.1:4001/sse`) exposing `get_runtime_status` and `stage1_guarded_noop`.
 - Saved agent `runsafe-agent` registered in TrueForge with attached `runsafe-mcp` server, `preload: true`, and checkpoint approval required on `stage1_guarded_noop`.
-- TrueForge tool execution genuinely verified: agent selects `get_runtime_status`, queries MCP server over SSE, receives structured JSON result, and returns factual observation.
-- TrueForge human checkpoint genuinely verified: agent pauses on `stage1_guarded_noop`, yielding `tool.approval_required` with `thread_id` and `tool_call_id`. Tested both REJECT (operator denies -> 0 executions) and APPROVE (operator allows -> 1 execution -> agent resumes).
 - Fastify control plane implemented (`@runsafe/control-plane` on `http://127.0.0.1:4000`) with `/health`, `/api/system/readiness`, `/api/dev/trueforge/smoke-run`, and `/api/dev/trueforge/approval-run`.
-- TrueForge event normalizer implemented in `@runsafe/trueforge-client`, mapping runtime events to domain events (`MODEL_ACTIVITY`, `TOOL_CALL_COMPLETED`, `APPROVAL_WAITING`, `APPROVAL_RESOLVED`, `AGENT_RUN_COMPLETED`).
-- 18 Vitest unit tests passing across schemas, normalizer, and MCP tools.
-- Automated verification script `npm run stage1:verify` implemented and executing all checks live.
+- Real Controlled Infrastructure implemented (`apps/demo-workload/checkout-api`):
+  - Fastify microservice with transactional PostgreSQL orders/products inventory flow.
+  - Multi-replica deployment (`checkout-api-1` and `checkout-api-2`) behind Nginx reverse proxy at `:8080`.
+  - PostgreSQL container `runsafe-postgres` with deterministic seed data (`prod-001`, `prod-002`, `prod-003`, `prod-fail`).
+  - Real in-memory metrics (`requestsTotal`, `checkoutTotal`, `errorRate`, `avgLatencyMs`).
+  - Structured JSON logging (`timestamp`, `service`, `version`, `replica`, `route`, `status`, `durationMs`, `errorCategory`, `error`).
+- Real Synthetic Traffic Generator (`infrastructure/scripts/traffic_generator.ts`):
+  - Emits real HTTP checkout requests across products.
+  - Captures version and replica tracking headers (`x-runsafe-version`, `x-runsafe-replica`).
+  - Records observations to rolling JSONL file `artifacts/traffic_log.jsonl`.
+- Three Deterministic Controlled Fault Scenarios implemented & verified:
+  1. Process Crash (`infrastructure/scripts/fault_crash.ts`): stops target container, observable outage, recoverable by restart.
+  2. Bad Deployment - Hero Demo (`infrastructure/scripts/fault_bad_deployment.ts`): deploys `v2.0.0` on replica 2. Process `/health` stays 200, PostgreSQL stays connected, but business `/checkout` fails with HTTP 500 schema regression error. Nginx traffic exhibits 50% error rate correlated 100% with `v2.0.0` on `checkout-api-2`. Proves restart is ineffective and rollback is required.
+  3. Ambiguous Failure (`infrastructure/scripts/fault_ambiguous.ts`): injects intermittent 503 downstream timeouts spread across replicas without version correlation.
+- Deterministic Environment Reset (`infrastructure/scripts/reset_env.ts`):
+  - Idempotently restores both API replicas to `v1.0.0`.
+  - Reseeds products and truncates order tables in PostgreSQL.
+  - Truncates traffic log.
+  - Polls all endpoints until 100% healthy.
+- Baseline Verification Script (`infrastructure/scripts/baseline_verify.ts`):
+  - Validates Docker Compose containers, Nginx ingress, PostgreSQL seed data, API replica health/version, synthetic checkout persistence, and in-memory metrics.
+- Repeatability verified: 2 consecutive cycles of fault -> reset -> verify passed without manual intervention.
+- AWS Deployment Artifacts created (`infrastructure/aws/`):
+  - `docker-compose.yml`: EC2 deployment with strictly private PostgreSQL network isolation (port 5432 unmapped to host).
+  - `setup_ec2.sh`: Host provisioning with Docker, UFW firewall allowing HTTP/SSH and blocking 5432.
+  - `README.md`: AWS runbook for deployment and remote fault testing.
+- Automated Stage 2 Verifier (`scripts/stage2_verify.ts`):
+  - End-to-end execution of Stage 1 regression, Compose build, baseline reset/verify, traffic generator, all 3 fault scenarios, repeatability cycles, and AWS status check.
+- 25 Vitest unit tests passing across all packages (`tests/unit/`).
+- TypeScript typecheck passing cleanly across entire repository.
 
 ## Blocked on Organizer Provisioning
 - Organizer OpenAI Model Provider: Awaiting `OPENAI_API_KEY`. (Local Qwen3 4B via Ollama on port 11434 actively verified as functional working fallback).
 - Daytona Sandbox Provider: Awaiting `DAYTONA_API_KEY`. (TrueForge on Windows 11 host requires Daytona SDK for sandbox execution; `LocalSandboxProvider` supports macOS and Linux only).
+- Organizer AWS Account Credentials: Awaiting AWS account credentials / EC2 host to deploy live remote target. (Local controlled infrastructure is 100% verified; AWS docker-compose, setup script, and runbook are complete in `infrastructure/aws/`).
 
 ## Pending
-- Stage 2: Real Demo Infrastructure (Docker Compose with Nginx canary reverse proxy, checkout-api replicas, PostgreSQL, traffic generation & failure injection).
+- Stage 3: TrueForge Agent Core & Model Routing.
 
 - Stage 3: TrueForge Agent Core & Model Routing.
 - Stage 4: Typed MCP Tool Layer.

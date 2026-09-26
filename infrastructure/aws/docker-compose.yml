@@ -1,0 +1,111 @@
+# ==============================================================================
+# RunSafe Controlled Infrastructure: AWS EC2 Docker Compose Deployment
+# ==============================================================================
+# Security: PostgreSQL is NOT published on host ports; strictly internal to runsafe-net.
+# Ingress: Nginx listens on port 80.
+# ==============================================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: runsafe-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: runsafe
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-runsafe_prod_secret}
+      POSTGRES_DB: checkout_db
+    # PostgreSQL is deliberately NOT mapped to host ports for AWS security
+    expose:
+      - "5432"
+    volumes:
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U runsafe -d checkout_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - runsafe-net
+
+  checkout-api-1:
+    build:
+      context: ../../
+      dockerfile: apps/demo-workload/checkout-api/Dockerfile
+    container_name: runsafe-checkout-api-1
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql://runsafe:${POSTGRES_PASSWORD:-runsafe_prod_secret}@postgres:5432/checkout_db
+      APP_VERSION: ${CHECKOUT_API_1_VERSION:-v1.0.0}
+      REPLICA_ID: checkout-api-1
+      ENVIRONMENT: aws-ec2
+      FAULT_PROFILE: ${CHECKOUT_API_1_FAULT:-none}
+    expose:
+      - "3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+    networks:
+      - runsafe-net
+
+  checkout-api-2:
+    build:
+      context: ../../
+      dockerfile: apps/demo-workload/checkout-api/Dockerfile
+    container_name: runsafe-checkout-api-2
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql://runsafe:${POSTGRES_PASSWORD:-runsafe_prod_secret}@postgres:5432/checkout_db
+      APP_VERSION: ${CHECKOUT_API_2_VERSION:-v1.0.0}
+      REPLICA_ID: checkout-api-2
+      ENVIRONMENT: aws-ec2
+      FAULT_PROFILE: ${CHECKOUT_API_2_FAULT:-none}
+    expose:
+      - "3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+    networks:
+      - runsafe-net
+
+  nginx:
+    image: nginx:alpine
+    container_name: runsafe-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      checkout-api-1:
+        condition: service_healthy
+      checkout-api-2:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/nginx-health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      - runsafe-net
+
+networks:
+  runsafe-net:
+    driver: bridge

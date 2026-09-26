@@ -13,12 +13,27 @@
     "test": "vitest run",
     "dev:control-plane": "tsx apps/control-plane/src/server.ts",
     "dev:mcp": "tsx packages/mcp-server/src/server.ts",
-    "stage1:verify": "tsx scripts/stage1_verify.ts"
+    "stage1:verify": "tsx scripts/stage1_verify.ts",
+    "stage2:verify": "tsx scripts/stage2_verify.ts",
+    "traffic:run": "tsx infrastructure/scripts/traffic_generator.ts",
+    "fault:crash": "tsx infrastructure/scripts/fault_crash.ts",
+    "fault:bad-deploy": "tsx infrastructure/scripts/fault_bad_deployment.ts",
+    "fault:ambiguous": "tsx infrastructure/scripts/fault_ambiguous.ts",
+    "env:reset": "tsx infrastructure/scripts/reset_env.ts",
+    "env:verify": "tsx infrastructure/scripts/baseline_verify.ts"
   },
   "devDependencies": {
     "@types/node": "^24.11.0",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2",
     "vitest": "^3.0.7"
+  },
+  "dependencies": {
+    "@fastify/cors": "^10.0.2",
+    "@types/pg": "^8.23.1",
+    "dotenv": "^16.4.7",
+    "fastify": "^5.2.1",
+    "pg": "^8.23.0",
+    "zod": "^3.24.2"
   }
 }
