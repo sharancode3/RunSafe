@@ -160,13 +160,14 @@ export class TrueForgeClient {
     return res.data || [];
   }
 
-  public async getAgent(name: string): Promise<any | null> {
+  public async getAgent(nameOrId: string): Promise<any | null> {
     try {
-      const res = await this.request<{ data: any }>(`/api/v1/agents/${name}`);
-      return res.data;
-    } catch {
-      return null;
-    }
+      const res = await this.request<{ data: any }>(`/api/v1/agents/${nameOrId}`);
+      if (res.data) return res.data;
+    } catch {}
+
+    const agents = await this.getAgents();
+    return agents.find((a) => a.name === nameOrId || a.id === nameOrId) || null;
   }
 
   public async createAgent(params: CreateAgentParams): Promise<any> {
@@ -176,8 +177,13 @@ export class TrueForgeClient {
     });
   }
 
-  public async updateAgent(name: string, manifest: AgentSpec): Promise<any> {
-    return this.request<any>(`/api/v1/agents/${name}`, {
+  public async updateAgent(nameOrId: string, manifest: AgentSpec): Promise<any> {
+    let targetId = nameOrId;
+    const existing = await this.getAgent(nameOrId);
+    if (existing?.id) {
+      targetId = existing.id;
+    }
+    return this.request<any>(`/api/v1/agents/${targetId}`, {
       method: "PUT",
       body: JSON.stringify({ manifest }),
     });

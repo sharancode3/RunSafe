@@ -15,6 +15,7 @@
     "dev:mcp": "tsx packages/mcp-server/src/server.ts",
     "stage1:verify": "tsx scripts/stage1_verify.ts",
     "stage2:verify": "tsx scripts/stage2_verify.ts",
+    "stage3:verify": "tsx scripts/stage3_verify.ts",
     "traffic:run": "tsx infrastructure/scripts/traffic_generator.ts",
     "fault:crash": "tsx infrastructure/scripts/fault_crash.ts",
     "fault:bad-deploy": "tsx infrastructure/scripts/fault_bad_deployment.ts",
