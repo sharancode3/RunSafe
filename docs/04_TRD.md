@@ -125,8 +125,8 @@ The RunSafe prototype is designed and optimized to run entirely local-first on t
   - **Rule:** Never load multiple 4B+ models simultaneously in Ollama. Gemma 3 4B is an optional cold fallback; Qwen3 4B is the primary local specialist.
 - **Storage:** NVMe SSD with $\ge 150\text{ GB}$ free space.
 
-### 3.2 Offline & Local-First Invariant
-While hackathon credits for OpenAI and AWS Bedrock may be provisioned, **the entire core demo (Scenarios 1, 2, and 3) must be 100% operational offline**. External cloud APIs are treated as optional planning accelerators, never as hard operational dependencies.
+### 3.2 Cloud-Primary with Local-First Resilience Invariant
+RunSafe adopts a **Cloud-Primary, Local-Resilient** deployment strategy. The primary hero target is an AWS EC2 instance running Docker Compose (controlled via scoped AWS Systems Manager/SSM), powered by organizer-provided OpenAI reasoning credits through TrueForge. Crucially, **the entire system maintains a 100% operational offline fallback** (identical local Docker Compose topology on localhost and local Qwen3 4B via Ollama). External cloud dependencies enhance the hero demonstration but never create a single point of failure.
 
 ---
 
@@ -134,21 +134,21 @@ While hackathon credits for OpenAI and AWS Bedrock may be provisioned, **the ent
 
 | Layer | Chosen Technology | Version / Specification | Rationale & Frozen Boundaries |
 |---|---|---|---|
-| **Agent Runtime** | `@truefoundry/trueforge-core` & `@truefoundry/trueforge` CLI | v0.2.1 | Mandatory hackathon harness. Coordinates agent sessions, tool routing, and sandboxed code execution. Runs on port `8790` (standalone SQLite mode). |
+| **Agent Runtime** | `@truefoundry/trueforge-core` & `@truefoundry/trueforge` CLI | v0.2.1 | Mandatory hackathon harness. Coordinates agent sessions, model routing, MCP tool dispatches, and sandboxed code execution. Runs on port `8790` (standalone mode with bundled Build Agent UI). |
+| **Primary Reasoning Model** | Organizer-Provided OpenAI Model | TrueForge Model Provider | Primary reasoning engine for complex incident diagnosis, multi-source hypothesis ranking, and PCA synthesis using hackathon credits (*Runtime Verification Required for Model ID/Quotas*). |
+| **Local Specialist & Fallback** | Qwen3 4B Instruct (`qwen3:4b-instruct-2507-q4_K_M`) | Quantized GGUF (~2.5 GB) | Local private model via Ollama (port `11434`) for runbook markdown parsing, triage, log compression, and 100% offline fallback. |
+| **Primary Cloud Target** | AWS EC2 (t3.medium) | Ubuntu 24.04 LTS / Docker Compose | Primary hero target running controlled workload (Nginx, Replicas, Postgres). Controlled via scoped AWS SSM without exposed SSH. |
+| **Fallback Local Target** | Local Docker Compose | Compose v2.29+ / Docker 29.7.2 | 100% identical multi-container workload running on HP Victus host for offline demo resilience. |
 | **Primary Language** | TypeScript | v5.5+ | End-to-end type safety across backend, frontend, MCP tools, and schemas. Zero cross-language serialization friction. |
 | **Control Plane API** | Fastify | v4.28+ | High-throughput, low-overhead Node.js server. First-class JSON Schema / Zod validation. Port `4000`. |
 | **Control Plane Database** | SQLite (`better-sqlite3`) | v11.0+ | File-based, zero-network, ACID-compliant persistence for incidents, contracts, evidence, PCA records, and audit events. |
-| **User Interface** | Next.js (App Router), React, Tailwind CSS | Next.js v15+, React v19+ | Professional incident command center. Component-level rendering, dark mode, responsive layout. Port `3000`. |
+| **User Interface** | Next.js (App Router), React, Tailwind CSS | Next.js v15+, React v19+ | Professional incident command center. Minimalist Monochrome design system. Port `3000`. |
 | **Graph Visualization** | React Flow (`@xyflow/react`) | v12+ | Topology dependency mapping, active incident blast-radius visualization, and canary traffic flows. |
 | **Operational Metrics** | Recharts | v2.12+ | Real-time telemetry visualization: error rates, latency percentiles, and replica version comparisons. |
 | **Tool Protocol** | Model Context Protocol (`@modelcontextprotocol/sdk`) | v1.30+ | Standardized, typed operational tools over stdio/HTTP. Zero arbitrary bash access. |
 | **Schema Validation** | Zod | v3.23+ | Universal schema validation for Recovery Contracts, MCP tool payloads, PCAs, and API requests. |
-| **Local AI Engine** | Ollama | v0.34.3 | Local model execution server on port `11434`. |
-| **Local Model** | Qwen3 4B Instruct (`qwen3:4b-instruct-2507-q4_K_M`) | Quantized GGUF (~2.5 GB) | Primary local model for runbook parsing, triage, log correlation, and evidence extraction. |
-| **Optional Hosted Model** | OpenAI (GPT-4o) / AWS Bedrock | Pluggable via TrueForge / AI SDK | Used for complex multi-step reasoning only if organizer credits are available. |
-| **Demo Infrastructure** | Docker Compose | Compose v2.29+ | Real multi-container topology: Nginx ingress, Checkout API replicas, PostgreSQL database. |
 | **Reverse Proxy** | Nginx | v1.25 Alpine | Ingress routing, canary traffic splitting, and replica version comparison. Port `8080`. |
-| **Demo Database** | PostgreSQL | v16 Alpine | Dedicated database for the demo workload (distinct from RunSafe SQLite). Port `5432`. |
+| **Demo Database** | PostgreSQL | v16 Alpine | Dedicated database for the demo workload (strictly isolated from RunSafe SQLite). Port `5432`. |
 | **Realtime Channel** | Server-Sent Events (SSE) | Fastify SSE plugin | Lightweight, unidirectional server-to-client streaming of incident state, tool dispatches, and approvals. |
 
 ---
@@ -243,16 +243,16 @@ While hackathon credits for OpenAI and AWS Bedrock may be provisioned, **the ent
                    ┌──────────────────────┴──────────────────────┐
                    ▼                                             ▼
      +---------------------------+                 +---------------------------+
-     | Local Provider (Ollama)   |                 | Hosted Provider (OpenAI)  |
-     | Model: Qwen3 4B Instruct  |                 | Model: GPT-4o / Bedrock   |
-     | Port: 11434 (Localhost)   |                 | (Optional Hackathon Token)|
+     | Primary Hosted Provider   |                 | Local Specialist Provider |
+     | Organizer-Provided OpenAI |                 | Model: Qwen3 4B Instruct  |
+     | (TrueForge Model Provider)|                 | Port: 11434 (Local Ollama)|
      +-------------+-------------+                 +-------------+-------------+
                    |                                             |
                    v                                             v
-        [Default / Offline Mode]                    [Complex Reasoning Boost]
-        - Runbook Parsing                           - Multi-step Root Cause
-        - Log Slicing & Triage                      - Complex PCA Justifications
-        - Structured Extraction                     - Fallback Branch Planning
+        [High Reasoning Engine]                     [Specialist / Offline Engine]
+        - Root Cause Diagnosis                      - Runbook Markdown Extraction
+        - Multi-Source Hypothesis                   - Log Chunk Summarization
+        - PCA Proposal Synthesis                    - 100% Offline Triage Fallback
 ```
 
 ### 6.1 Local Model Specifications (Qwen3 4B Instruct)
@@ -260,7 +260,7 @@ While hackathon credits for OpenAI and AWS Bedrock may be provisioned, **the ent
 - **Serving Engine:** Ollama v0.34.3 via standard OpenAI-compatible HTTP endpoint (`http://127.0.0.1:11434/v1`).
 - **Context Window:** Configured to 4,096 tokens (minimizes VRAM footprint during multi-turn interactions).
 - **Temperature:** $0.1$ for structured extraction and contract compilation; $0.2$ for diagnostic hypothesis formation.
-- **Failover Invariant:** If the hosted OpenAI model is unavailable, rate-limited, or unconfigured, the router **must fall back instantly to local Qwen3 4B** with zero pipeline disruption.
+- **Failover Invariant:** If the hosted OpenAI model is unavailable, rate-limited (HTTP 429), or unconfigured, the router **must fall back instantly to local Qwen3 4B** with zero pipeline disruption (`TR-003`). If the task exceeds local 4B reasoning capability, the system safely halts and escalates to a human SRE rather than executing degraded mutations.
 
 ### 6.2 Prohibited Model Responsibilities (Non-LLM Tasks)
 Under no circumstances may an LLM be granted authority over:

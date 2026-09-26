@@ -14,14 +14,14 @@ Stage 1: Foundation & Runtime Bootstrap (Environment verification & initial proj
 - Authoritative UI/UX Specification completed and frozen in `docs/06_UI_UX_SPECIFICATION.md` (Minimalist Monochrome design system, controlled rounded-corner scale, zero drop shadows, typography triad, wireframes for 7 core surfaces, and live demo interaction flows).
 - Authoritative Data, Database & API Design Specification completed and frozen in `docs/07_DATA_DATABASE_API_DESIGN.md` (Dual-database boundary: SQLite `runsafe.db` for control plane with 15 tables and SHA-256 payload integrity hashing vs PostgreSQL `checkout_db` on 5432 for demo workload; complete `/api/v1` REST matrix and `/api/v1/incidents/:id/stream` SSE channel).
 - Authoritative System & Infrastructure Architecture Specification completed and frozen in `docs/architecture/09_SYSTEM_INFRASTRUCTURE_ARCHITECTURE.md` (C4 context & container architecture, physical deployment, network & trust boundaries, dual execution pipeline, Primary OpenAI Model integration via TrueForge + local Qwen3 4B fallback, AWS EC2 via SSM primary target + local Docker fallback, progressive canary rollback, and independent objective verifier).
+- Authoritative Agent, TrueForge & Safety Architecture Specification completed and frozen in `docs/architecture/10_AGENT_TRUEFORGE_SAFETY_ARCHITECTURE.md` (Saved agent definition in TrueForge on localhost:8790, programmatic Next.js/Fastify integration, typed MCP tool layer, TrueForge isolated Python sandbox, deterministic Safety Kernel outside LLM, immutable Proof-Carrying Actions with SHA-256 fingerprinting, human approval gating, and independent objective verifier).
 - Verified `@truefoundry/trueforge` CLI (v0.2.1) downloaded and operational via `npx` (runs on default port 8790 in standalone mode with SQLite).
 
 ## Partially Completed
-- Documentation suite preparation (PRD, TRD, Workflow, UI/UX, DB/API, and System Architecture complete; next: 10_AGENT_TRUEFORGE_SAFETY_ARCHITECTURE.md).
-- Toolchain inspection complete.
+- Core architecture baseline complete and frozen (PRD, TRD, Workflow, UI/UX, DB/API, System Architecture, and Agent/TrueForge/Safety Architecture).
+- `11_INCIDENT_RECOVERY_RELIABILITY_ARCHITECTURE.md` scheduled to follow alongside implementation.
 
 ## Pending
-- Comprehensive documentation package setup (Architecture, MCP specs, Safety Kernel, Testing/Evaluation).
 - Stage 1: Repository bootstrap (TypeScript monorepo / Fastify control plane + Next.js frontend + shared Zod schemas + SQLite).
 - Stage 2: Real Demo Infrastructure (Docker Compose with Nginx canary reverse proxy, checkout-api replicas, PostgreSQL, traffic generation & failure injection).
 - Stage 3: TrueForge Agent Core & Model Routing.
