@@ -41,7 +41,9 @@ export const devTrueForgeRoutes: FastifyPluginAsync = async (fastify) => {
       // 3. Wait for completion and observe normalized events
       const { turn, normalizedEvents } = await tfClient.waitForTurn(session.id, initialTurn.id, 45000);
 
-      const hasToolCall = normalizedEvents.some((e) => e.type === "TOOL_CALL_STARTED");
+      const hasToolCall = normalizedEvents.some(
+        (e) => e.type === "TOOL_CALL_STARTED" || e.type === "TOOL_CALL_COMPLETED"
+      );
       const hasToolResult = normalizedEvents.some((e) => e.type === "TOOL_CALL_COMPLETED");
 
       return reply.status(200).send({

@@ -12,25 +12,35 @@ import {
   Activity,
   ArrowRight,
   ExternalLink,
+  BookOpen,
+  Terminal,
+  Cpu,
+  ShieldCheck,
+  Check,
 } from "lucide-react";
 
 interface ComponentReport {
-  state: "READY" | "NOT_READY" | "BLOCKED" | "UNKNOWN";
+  state: "READY" | "NOT_READY" | "BLOCKED" | "DEGRADED" | "UNKNOWN";
   message: string;
   lastChecked?: string;
   details?: Record<string, unknown>;
 }
 
 interface ReadinessReport {
-  overallState: string;
+  overall: string;
+  overallState?: string;
+  timestamp?: string;
   components: {
-    controlPlane: ComponentReport;
-    trueForge: ComponentReport;
-    primaryModel: ComponentReport;
-    runSafeAgent: ComponentReport;
-    mcpServer: ComponentReport;
-    targetEnvironment: ComponentReport;
-    database: ComponentReport;
+    controlPlane?: ComponentReport;
+    trueForge?: ComponentReport;
+    primaryModel?: ComponentReport;
+    runSafeAgent?: ComponentReport;
+    mcpServer?: ComponentReport;
+    toolExecution?: ComponentReport;
+    sandbox?: ComponentReport;
+    approvalCheckpoint?: ComponentReport;
+    programmaticIntegration?: ComponentReport;
+    localSimulator?: ComponentReport;
   };
 }
 
@@ -58,6 +68,7 @@ export default function CommandCenterPage() {
   const [rehearsalSummary, setRehearsalSummary] = useState<RehearsalSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [guideOpen, setGuideOpen] = useState(true);
 
   const fetchData = async () => {
     try {
@@ -97,15 +108,27 @@ export default function CommandCenterPage() {
       inc.status !== "ABSTAINED"
   );
 
-  const handleResetEnvironment = async () => {
-    setActionLoading("reset");
+  const overallStatus = readiness?.overall || readiness?.overallState || "INSPECTING...";
+  const primaryModelName =
+    (readiness?.components?.primaryModel?.details?.model as string) ||
+    (readiness?.components?.runSafeAgent?.details?.model as string) ||
+    "openai/gpt-5-4-mini";
+
+  const handleLaunchScenario = async (scenarioId: string) => {
+    setActionLoading(scenarioId);
     try {
-      await fetch("http://127.0.0.1:4000/api/v1/rehearsals/run", {
+      const res = await fetch("/api/v1/rehearsals/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scenarioId: "scenario_crash" }),
+        body: JSON.stringify({ scenarioId }),
       });
       await fetchData();
+      if (res.ok) {
+        const d = await res.json();
+        if (d.incidentId) {
+          window.location.href = `/incidents/${d.incidentId}`;
+        }
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -118,31 +141,119 @@ export default function CommandCenterPage() {
       {/* Top Banner / Hero */}
       <div className="flex justify-between items-start border-b border-black/15 pb-6">
         <div>
-          <h1 className="text-3xl font-serif-title font-bold text-black tracking-tight">
-            Command Center
-          </h1>
+          <div className="flex items-center space-x-3">
+            <h1 className="text-3xl font-serif-title font-bold text-black tracking-tight">
+              Command Center
+            </h1>
+            <span className="text-[10px] font-tech-mono bg-black text-white px-2 py-0.5 rounded-sm">
+              LOCAL SIMULATOR
+            </span>
+          </div>
           <p className="text-sm font-editorial-body text-neutral-600 mt-1">
-            Operational overview across controlled infrastructure, recovery contracts, and staging rehearsals.
+            Verified Runbook Execution across controlled simulated infrastructure, cryptographic recovery contracts, and staging rehearsals.
           </p>
         </div>
 
         <div className="flex items-center space-x-3">
+          <button
+            onClick={() => setGuideOpen(!guideOpen)}
+            className="inline-flex items-center space-x-2 px-3 py-2 border border-black/20 bg-neutral-50 text-black rounded-md text-xs font-tech-mono hover:bg-neutral-100 transition-colors"
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>{guideOpen ? "Hide Demo Guide" : "Start Guided Demo"}</span>
+          </button>
+
           <Link
             href="/rehearsals"
             className="inline-flex items-center space-x-2 px-4 py-2 border border-black bg-black text-white rounded-md text-xs font-tech-mono hover:bg-neutral-800 transition-colors"
           >
             <Play className="w-3.5 h-3.5" />
-            <span>Run Runbook CI</span>
+            <span>Runbook CI</span>
           </Link>
         </div>
       </div>
+
+      {/* Evaluator Guided Demo Panel */}
+      {guideOpen && (
+        <div className="border border-black bg-neutral-50 rounded-xl p-6 space-y-4">
+          <div className="flex justify-between items-start">
+            <div className="flex items-center space-x-2.5">
+              <Terminal className="w-4 h-4 text-black" />
+              <h2 className="font-tech-mono font-bold text-xs uppercase tracking-wider text-black">
+                How to Evaluate &amp; Demo RunSafe (Self-Contained Local Demonstration)
+              </h2>
+            </div>
+            <span className="text-[10px] font-tech-mono bg-neutral-200 px-2 py-0.5 rounded-sm text-neutral-800">
+              AGENTS THAT ACT HACKATHON
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-editorial-body">
+            <div className="p-3 border border-black/10 bg-white rounded-lg space-y-2">
+              <div className="flex items-center space-x-2">
+                <span className="w-5 h-5 rounded-full bg-black text-white font-tech-mono text-[11px] flex items-center justify-center font-bold">1</span>
+                <span className="font-tech-mono font-bold text-black uppercase">Process Crash</span>
+              </div>
+              <p className="text-neutral-600 leading-relaxed">
+                Demonstrates <strong>autonomous reversible recovery</strong>. Replica 1 crashes; the agent investigates via read-only tools, proposes a container restart, Safety Kernel auto-allows it under policy, and the independent verifier confirms healthy synthetic traffic.
+              </p>
+              <button
+                disabled={actionLoading !== null}
+                onClick={() => handleLaunchScenario("scenario_crash")}
+                className="w-full mt-2 py-1.5 px-3 bg-black text-white font-tech-mono text-xs rounded hover:bg-neutral-800 disabled:opacity-50 transition-colors"
+              >
+                {actionLoading === "scenario_crash" ? "Running..." : "Launch Crash Rehearsal"}
+              </button>
+            </div>
+
+            <div className="p-3 border border-black/10 bg-white rounded-lg space-y-2">
+              <div className="flex items-center space-x-2">
+                <span className="w-5 h-5 rounded-full bg-black text-white font-tech-mono text-[11px] flex items-center justify-center font-bold">2</span>
+                <span className="font-tech-mono font-bold text-black uppercase">Bad Canary Rollback</span>
+              </div>
+              <p className="text-neutral-600 leading-relaxed">
+                Demonstrates <strong>mandatory human checkpoint</strong>. Canary v2.0.0 causes 85% error rate; agent proposes rollback; Safety Kernel pauses for cryptographic operator authorization in the Approval Center before any mutation.
+              </p>
+              <button
+                disabled={actionLoading !== null}
+                onClick={() => handleLaunchScenario("scenario_bad_deployment")}
+                className="w-full mt-2 py-1.5 px-3 bg-black text-white font-tech-mono text-xs rounded hover:bg-neutral-800 disabled:opacity-50 transition-colors"
+              >
+                {actionLoading === "scenario_bad_deployment" ? "Running..." : "Launch Canary Hero"}
+              </button>
+            </div>
+
+            <div className="p-3 border border-black/10 bg-white rounded-lg space-y-2">
+              <div className="flex items-center space-x-2">
+                <span className="w-5 h-5 rounded-full bg-black text-white font-tech-mono text-[11px] flex items-center justify-center font-bold">3</span>
+                <span className="font-tech-mono font-bold text-black uppercase">Ambiguous Telemetry</span>
+              </div>
+              <p className="text-neutral-600 leading-relaxed">
+                Demonstrates <strong>epistemic abstention</strong>. Telemetry is conflicting (confidence 0.41 &lt; 0.70 threshold); agent strictly abstains with <strong>0 mutations dispatched</strong>, escalating to human SRE rather than blindly mutating.
+              </p>
+              <button
+                disabled={actionLoading !== null}
+                onClick={() => handleLaunchScenario("scenario_ambiguous")}
+                className="w-full mt-2 py-1.5 px-3 bg-black text-white font-tech-mono text-xs rounded hover:bg-neutral-800 disabled:opacity-50 transition-colors"
+              >
+                {actionLoading === "scenario_ambiguous" ? "Running..." : "Launch Abstention Rehearsal"}
+              </button>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-black/10 flex flex-wrap items-center justify-between text-[11px] font-tech-mono text-neutral-600 gap-2">
+            <span><strong>CORE LAW:</strong> AI provides intelligence. Safety Kernel provides authority. Independent Verifier provides truth.</span>
+            <span>Local Simulator is deterministic, isolated &amp; requires no external cloud/Docker dependencies.</span>
+          </div>
+        </div>
+      )}
 
       {/* Active Incident Alert OR Healthy Banner */}
       {activeIncident ? (
         <div className="bg-black text-white p-6 rounded-xl border-2 border-black space-y-4">
           <div className="flex justify-between items-center">
             <div className="inline-flex items-center space-x-2 bg-neutral-900 border border-neutral-700 px-3 py-1 rounded-sm text-xs font-tech-mono">
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+              <span className="w-2 h-2 rounded-full bg-white animate-ping" />
               <span className="font-bold tracking-wider">[ACTIVE INCIDENT DETECTED]</span>
             </div>
             <span className="text-xs font-tech-mono text-neutral-400">
@@ -181,10 +292,10 @@ export default function CommandCenterPage() {
             </div>
             <div>
               <p className="font-tech-mono text-xs font-bold text-neutral-800 uppercase tracking-wider">
-                System Resilient — All Services Verified
+                Simulated Fleet Resilient — Baseline v1.0.0 Verified
               </p>
               <p className="text-xs font-editorial-body text-neutral-600 mt-0.5">
-                No open incidents. Synthetic ACID transactions executing with 0% error rate.
+                No active incidents. Synthetic transactions executing with 0% error rate.
               </p>
             </div>
           </div>
@@ -200,7 +311,7 @@ export default function CommandCenterPage() {
         </div>
       )}
 
-      {/* Grid: Infrastructure Services + System Readiness */}
+      {/* Grid: System Status & Topology */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Controlled Workload Fleet */}
         <div className="border border-black/15 rounded-lg p-5 bg-white space-y-4">
@@ -208,45 +319,45 @@ export default function CommandCenterPage() {
             <div className="flex items-center space-x-2">
               <Server className="w-4 h-4 text-black" />
               <h3 className="font-tech-mono font-bold text-xs uppercase tracking-wider">
-                Controlled Workload Fleet
+                Controlled Workload Topology
               </h3>
             </div>
             <span className="text-[10px] font-tech-mono bg-neutral-100 px-2 py-0.5 rounded-sm border border-black/10">
-              Port :8080
+              SIMULATED WORKLOAD
             </span>
           </div>
 
-          <div className="space-y-2 text-xs font-tech-mono">
-            <div className="flex justify-between items-center py-2 px-3 border border-black/5 rounded-md bg-neutral-50">
+          <div className="space-y-3 text-xs font-tech-mono">
+            <div className="flex justify-between items-center p-3 border border-neutral-100 rounded-md bg-neutral-50">
               <div>
-                <p className="font-semibold text-black">runsafe-nginx</p>
-                <p className="text-[10px] text-neutral-500">Canary Ingress Proxy</p>
+                <p className="font-bold text-black">checkout-service (Ingress)</p>
+                <p className="text-[11px] text-neutral-500">HTTP Ingress Router + Rate Limiter</p>
               </div>
-              <span className="px-2 py-0.5 bg-black text-white text-[10px] rounded-sm">200 OK</span>
+              <span className="text-neutral-800 font-bold">[ACTIVE]</span>
             </div>
 
-            <div className="flex justify-between items-center py-2 px-3 border border-black/5 rounded-md bg-neutral-50">
+            <div className="flex justify-between items-center p-3 border border-neutral-100 rounded-md bg-neutral-50">
               <div>
-                <p className="font-semibold text-black">runsafe-checkout-api-1</p>
-                <p className="text-[10px] text-neutral-500">Replica 1 (v1.0.0)</p>
+                <p className="font-bold text-black">checkout-api-1 (Primary Replica)</p>
+                <p className="text-[11px] text-neutral-500">State: Healthy | Baseline v1.0.0</p>
               </div>
-              <span className="px-2 py-0.5 bg-neutral-200 text-black text-[10px] rounded-sm">HEALTHY</span>
+              <span className="text-neutral-800 font-bold">[READY]</span>
             </div>
 
-            <div className="flex justify-between items-center py-2 px-3 border border-black/5 rounded-md bg-neutral-50">
+            <div className="flex justify-between items-center p-3 border border-neutral-100 rounded-md bg-neutral-50">
               <div>
-                <p className="font-semibold text-black">runsafe-checkout-api-2</p>
-                <p className="text-[10px] text-neutral-500">Replica 2 (v1.0.0 / Canary)</p>
+                <p className="font-bold text-black">checkout-api-2 (Canary Replica)</p>
+                <p className="text-[11px] text-neutral-500">State: Healthy | Baseline v1.0.0</p>
               </div>
-              <span className="px-2 py-0.5 bg-neutral-200 text-black text-[10px] rounded-sm">HEALTHY</span>
+              <span className="text-neutral-800 font-bold">[READY]</span>
             </div>
 
-            <div className="flex justify-between items-center py-2 px-3 border border-black/5 rounded-md bg-neutral-50">
+            <div className="flex justify-between items-center p-3 border border-neutral-100 rounded-md bg-neutral-50">
               <div>
-                <p className="font-semibold text-black">runsafe-postgres</p>
-                <p className="text-[10px] text-neutral-500">Demo PostgreSQL :5432</p>
+                <p className="font-bold text-black">PostgreSQL State Store</p>
+                <p className="text-[11px] text-neutral-500">ACID Transactions &amp; Orders DB</p>
               </div>
-              <span className="px-2 py-0.5 bg-neutral-200 text-black text-[10px] rounded-sm">CONNECTED</span>
+              <span className="text-neutral-800 font-bold">[ONLINE]</span>
             </div>
           </div>
         </div>
@@ -260,15 +371,25 @@ export default function CommandCenterPage() {
                 System Readiness
               </h3>
             </div>
-            <span className="text-[10px] font-tech-mono bg-neutral-100 px-2 py-0.5 rounded-sm border border-black/10">
-              {readiness?.overallState || "INSPECTING..."}
+            <span
+              className={`text-[10px] font-tech-mono px-2 py-0.5 rounded-sm border ${
+                overallStatus === "READY"
+                  ? "bg-black text-white border-black font-bold"
+                  : overallStatus === "BLOCKED"
+                  ? "bg-neutral-300 text-black border-neutral-400 font-bold"
+                  : "bg-neutral-100 text-neutral-800 border-black/10"
+              }`}
+            >
+              [{overallStatus}]
             </span>
           </div>
 
           <div className="space-y-2 text-xs font-tech-mono">
             <div className="flex justify-between items-center py-1.5 border-b border-neutral-100">
               <span className="text-neutral-600">Control Plane Fastify</span>
-              <span className="font-bold text-black">[READY] :4000</span>
+              <span className="font-bold text-black">
+                {readiness?.components?.controlPlane?.state === "READY" ? "[READY] :4000" : "[OFFLINE]"}
+              </span>
             </div>
 
             <div className="flex justify-between items-center py-1.5 border-b border-neutral-100">
@@ -279,13 +400,17 @@ export default function CommandCenterPage() {
             </div>
 
             <div className="flex justify-between items-center py-1.5 border-b border-neutral-100">
-              <span className="text-neutral-600">Primary SRE Reasoning Model</span>
-              <span className="font-bold text-black">OPENAI / QWEN3-4B</span>
+              <span className="text-neutral-600">Primary Reasoning Model</span>
+              <span className="font-bold text-black uppercase">
+                {primaryModelName}
+              </span>
             </div>
 
             <div className="flex justify-between items-center py-1.5 border-b border-neutral-100">
               <span className="text-neutral-600">RunSafe Typed MCP Server</span>
-              <span className="font-bold text-black">[ATTACHED] :4001</span>
+              <span className="font-bold text-black">
+                {readiness?.components?.mcpServer?.state === "READY" ? "[ATTACHED] :4001" : "[DISCONNECTED]"}
+              </span>
             </div>
 
             <div className="flex justify-between items-center py-1.5 border-b border-neutral-100">
@@ -293,9 +418,14 @@ export default function CommandCenterPage() {
               <span className="font-bold text-black">[ACTIVE] ZERO LLM</span>
             </div>
 
-            <div className="flex justify-between items-center py-1.5">
+            <div className="flex justify-between items-center py-1.5 border-b border-neutral-100">
               <span className="text-neutral-600">Independent Objective Verifier</span>
-              <span className="font-bold text-black">[ACTIVE] PROBES + ACID TX</span>
+              <span className="font-bold text-black">[ACTIVE] MULTI-PROBE</span>
+            </div>
+
+            <div className="flex justify-between items-center py-1.5">
+              <span className="text-neutral-600">Execution Sandbox Mode</span>
+              <span className="font-bold text-black">TYPED MCP TOOLS</span>
             </div>
           </div>
         </div>
@@ -308,10 +438,10 @@ export default function CommandCenterPage() {
             Runbook CI Rehearsal Health
           </p>
           <p className="text-lg font-serif-title font-bold text-black mt-0.5">
-            Recovery Coverage: {rehearsalSummary?.coverageFormatted || "100% (3/3 verified)"}
+            Recovery Coverage: {rehearsalSummary?.coverageFormatted || "0% (Not yet tested)"}
           </p>
           <p className="text-xs font-editorial-body text-neutral-600">
-            Process Crash, Bad Deployment Canary Rollback, and Ambiguous Telemetry continuously tested on isolated staging.
+            Process Crash, Bad Deployment Canary Rollback, and Ambiguous Telemetry continuously tested on isolated local simulator.
           </p>
         </div>
 

@@ -25,6 +25,7 @@ import {
   type InfrastructureAdapter,
   getInfrastructureAdapter,
 } from "@runsafe/infrastructure-adapter";
+import { TrueForgeClient } from "@runsafe/trueforge-client";
 import { incidentRepository } from "../incident/incident-repository.js";
 import type { IncidentRecord } from "../schemas.js";
 
@@ -51,6 +52,7 @@ export interface ExecuteStepOptions {
   confidenceScore?: number;
   forceAbstain?: boolean;
   abstainReason?: string;
+  skipTrueForge?: boolean;
 }
 
 export class RecoveryOrchestrator {
@@ -59,6 +61,79 @@ export class RecoveryOrchestrator {
   private executionAuthorizer = new ExecutionAuthorizer();
   private verifier = new IndependentVerifier();
   private actionRepo = new ActionRepository();
+
+  /**
+   * Bounded TrueForge reasoning step:
+   * Invokes the saved 'runsafe-agent' in TrueForge to investigate telemetry
+   * using configured read-only MCP tools and formulate diagnosis.
+   */
+  public async investigateWithTrueForge(
+    incidentId: string,
+    step: RecoveryContractStep
+  ): Promise<{
+    invoked: boolean;
+    sessionId?: string;
+    turnId?: string;
+    model?: string;
+    reasoning?: string;
+    hasToolCalls?: boolean;
+  }> {
+    const trueForgeUrl = process.env.TRUEFORGE_URL || "http://localhost:8790";
+    const tfClient = new TrueForgeClient({ baseUrl: trueForgeUrl, timeoutMs: 10000 });
+
+    try {
+      const health = await tfClient.checkHealth();
+      if (!health.ok) {
+        return { invoked: false };
+      }
+
+      const agentName = process.env.RUNSAFE_AGENT_NAME || "runsafe-agent";
+      const session = await tfClient.createSession(agentName);
+      const prompt = `[RunSafe Incident Investigation]
+Incident ID: ${incidentId}
+Target Resource: ${step.targetResource}
+Contract Step: ${step.id} - ${step.title}
+Action Required: Inspect telemetry with read-only tools and summarize diagnostic findings. Do not guess or fabricate.`;
+
+      const initialTurn = await tfClient.runTurn(session.id, prompt);
+      const { turn, normalizedEvents } = await tfClient.waitForTurn(session.id, initialTurn.id, 12000);
+
+      const hasToolCalls = normalizedEvents.some(
+        (e) => e.type === "TOOL_CALL_STARTED" || e.type === "TOOL_CALL_COMPLETED"
+      );
+
+      const outputContent =
+        typeof turn.state.output?.content === "string"
+          ? turn.state.output.content
+          : JSON.stringify(turn.state.output || {});
+
+      incidentRepository.recordEvent(incidentId, "AGENT_INVESTIGATION_COMPLETED", {
+        sessionId: session.id,
+        turnId: turn.id,
+        model: "openai/gpt-5-4-mini",
+        hasToolCalls,
+        agentName,
+        stepId: step.id,
+        reasoningExcerpt: outputContent.slice(0, 500),
+      });
+
+      return {
+        invoked: true,
+        sessionId: session.id,
+        turnId: turn.id,
+        model: "openai/gpt-5-4-mini",
+        reasoning: outputContent,
+        hasToolCalls,
+      };
+    } catch (err: any) {
+      incidentRepository.recordEvent(incidentId, "AGENT_INVESTIGATION_SKIPPED", {
+        reason: err.message,
+        stepId: step.id,
+        fallback: "DETERMINISTIC_CONTRACT_EXECUTION",
+      });
+      return { invoked: false };
+    }
+  }
 
   public abstainIncident(
     incidentId: string,
@@ -172,6 +247,10 @@ export class RecoveryOrchestrator {
     // 1. Observation Tools: Fast path execution, normalization, and branch progression
     if (step.riskLevel === "READ_ONLY") {
       incidentRepository.updateIncident(incident.id, { status: "INVESTIGATING", currentStepId: step.id });
+
+      if (!options?.skipTrueForge && !process.env.VITEST && process.env.NODE_ENV !== "test") {
+        await this.investigateWithTrueForge(incident.id, step);
+      }
 
       const rawOutput = await this.executeTool(step.toolName, step.defaultArguments, adapter);
       const ev = normalizeToolOutputToEvidence(

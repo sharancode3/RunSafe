@@ -18,7 +18,7 @@ export const evidenceRoutes: FastifyPluginAsync = async (app) => {
       evidenceType?: string;
     };
     const list = evidenceRepository.listEvidence(query);
-    return { data: list };
+    return { data: list, evidence: list, count: list.length };
   });
 
   // 2. Collect tool output into normalized evidence

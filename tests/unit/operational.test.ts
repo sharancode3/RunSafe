@@ -157,9 +157,9 @@ describe("Stage 3 Security Sanitization & Envelope", () => {
 });
 
 describe("Stage 3 Infrastructure Adapter Factory", () => {
-  it("resolves LocalDockerAdapter for LOCAL target", () => {
+  it("resolves LocalSimulatorAdapter for LOCAL target", () => {
     const adapter = getInfrastructureAdapter("LOCAL");
-    expect(adapter.provider).toBe("LOCAL_DOCKER");
+    expect(adapter.provider).toBe("LOCAL_SIMULATOR");
     expect(adapter.environment).toBe("LOCAL");
   });
 

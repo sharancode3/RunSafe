@@ -44,6 +44,8 @@ export const IncidentEventTypeSchema = z.enum([
   "INCIDENT_RESOLVED",
   "INCIDENT_ESCALATED",
   "INCIDENT_ABSTAINED",
+  "AGENT_INVESTIGATION_COMPLETED",
+  "AGENT_INVESTIGATION_SKIPPED",
 ]);
 export type IncidentEventType = z.infer<typeof IncidentEventTypeSchema>;
 

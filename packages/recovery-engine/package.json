@@ -15,6 +15,7 @@
     "@runsafe/runbooks": "*",
     "@runsafe/safety-kernel": "*",
     "@runsafe/shared": "*",
+    "@runsafe/trueforge-client": "*",
     "@runsafe/verifier": "*",
     "zod": "^3.24.2"
   },

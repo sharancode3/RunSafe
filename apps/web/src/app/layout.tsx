@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   Play,
   RotateCcw,
+  BookOpen,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -26,7 +27,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-white text-black antialiased flex flex-col">
+      <body className="min-h-screen bg-white text-black antialiased flex flex-col font-sans">
         {/* Top Persistent Header */}
         <header className="border-b border-black/15 bg-white px-6 py-3 flex items-center justify-between sticky top-0 z-50">
           <div className="flex items-center space-x-3">
@@ -38,12 +39,12 @@ export default function RootLayout({
             </span>
           </div>
 
-          {/* Incident Ticker */}
+          {/* Ticker */}
           <div className="flex items-center space-x-2">
             <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-sm text-xs font-tech-mono border border-black/15 bg-neutral-50">
               <span className="w-2 h-2 rounded-full bg-black animate-pulse" />
-              <span className="font-semibold">SYSTEM READY</span>
-              <span className="text-neutral-500">|</span>
+              <span className="font-semibold">LOCAL SIMULATION</span>
+              <span className="text-neutral-400">|</span>
               <span className="text-neutral-600">INDEPENDENT VERIFIER ACTIVE</span>
             </div>
           </div>
@@ -78,6 +79,14 @@ export default function RootLayout({
                   </Link>
 
                   <Link
+                    href="/incidents"
+                    className="flex items-center space-x-2.5 px-3 py-2 rounded-md text-xs font-tech-mono text-black hover:bg-black hover:text-white transition-colors"
+                  >
+                    <FileText className="w-4 h-4" />
+                    <span>Incidents</span>
+                  </Link>
+
+                  <Link
                     href="/approvals"
                     className="flex items-center justify-between px-3 py-2 rounded-md text-xs font-tech-mono text-black hover:bg-black hover:text-white transition-colors"
                   >
@@ -97,12 +106,20 @@ export default function RootLayout({
                     <Play className="w-4 h-4" />
                     <span>Runbook CI</span>
                   </Link>
+
+                  <Link
+                    href="/runbooks"
+                    className="flex items-center space-x-2.5 px-3 py-2 rounded-md text-xs font-tech-mono text-black hover:bg-black hover:text-white transition-colors"
+                  >
+                    <BookOpen className="w-4 h-4" />
+                    <span>Runbook Lab</span>
+                  </Link>
                 </nav>
               </div>
 
               <div>
                 <p className="text-[10px] font-tech-mono uppercase tracking-widest text-neutral-400 mb-2 px-2">
-                  Controlled Targets
+                  Controlled Fleet
                 </p>
                 <div className="px-3 py-2 text-xs font-tech-mono border border-black/10 rounded-md bg-white space-y-1">
                   <div className="flex justify-between items-center">
@@ -110,13 +127,13 @@ export default function RootLayout({
                     <span className="font-semibold">checkout-api</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-neutral-500">Fleet:</span>
+                    <span className="text-neutral-500">Topology:</span>
                     <span>2 Replicas</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-neutral-500">Target:</span>
+                    <span className="text-neutral-500">Adapter:</span>
                     <span className="bg-black text-white px-1 rounded-sm text-[10px]">
-                      LOCAL DOCKER
+                      SIMULATOR
                     </span>
                   </div>
                 </div>

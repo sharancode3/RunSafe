@@ -151,15 +151,20 @@ export class RehearsalRunner {
           });
 
           if (stepRes.status === "PAUSED_FOR_APPROVAL") {
-            // Rehearsal Operator Approval Gate
-            console.log(`[Runbook CI] Human approval checkpoint reached for ${stepRes.actionId} (${stepRes.stepId}). Simulating operator approval...`);
+            // Rehearsal Operator Approval Gate: explicitly labeled as SIMULATED_CI_POLICY
+            console.log(`[Runbook CI] Human approval checkpoint reached for ${stepRes.actionId} (${stepRes.stepId}). Simulating operator approval under CI policy...`);
+            executionDetails.simulatedApproval = {
+              isSimulated: true,
+              policy: "SIMULATED_CI_POLICY",
+              note: "Automated approval is isolated to staging rehearsals and cannot bypass interactive human approval checkpoints.",
+            };
             const resumeRes = await this.orchestrator.resumeWithApproval(
               incident.id,
               stepRes.actionId!,
               {
-                approvedBy: "Runbook-CI-Runner",
+                approvedBy: "Runbook-CI-Runner [SIMULATED_CI_POLICY]",
                 payloadHash: stepRes.payloadHash!,
-                operatorNote: `Rehearsal automated approval for ${stepRes.stepId}`,
+                operatorNote: `[SIMULATED_CI_POLICY] Automated staging rehearsal approval for ${stepRes.stepId}`,
               },
               adapter
             );
@@ -244,6 +249,9 @@ export class RehearsalRunner {
       } catch (cleanErr: any) {
         console.error(`[Runbook CI] Cleanup failed: ${cleanErr.message}`);
         executionDetails.cleanup = { success: false, error: cleanErr.message };
+        // Invariant: A rehearsal CANNOT pass if cleanup fails
+        outcome = "FAIL";
+        executionDetails.cleanupFailureNote = "Rehearsal outcome downgraded to FAIL because post-run environment cleanup failed.";
       }
     }
 

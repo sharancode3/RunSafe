@@ -41,7 +41,10 @@ export const rehearsalRoutes: FastifyPluginAsync = async (fastify) => {
       totalScenarios,
       verifiedScenarios,
       coveragePercentage,
-      coverageFormatted: `${coveragePercentage}% (${verifiedScenarios}/${totalScenarios} verified)`,
+      coverageFormatted:
+        runs.length === 0
+          ? `0% (0/${totalScenarios} verified)`
+          : `${coveragePercentage}% (${verifiedScenarios}/${totalScenarios} verified)`,
       lastRunAt: runs[0]?.executedAt || null,
       totalRunsCount: runs.length,
     });

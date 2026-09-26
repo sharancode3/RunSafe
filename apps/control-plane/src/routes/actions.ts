@@ -12,7 +12,7 @@ import {
 } from "@runsafe/safety-kernel";
 import { RunbookRepository } from "@runsafe/runbooks";
 import { getInfrastructureAdapter } from "@runsafe/infrastructure-adapter";
-import type { TargetEnvironment } from "@runsafe/shared";
+import { type TargetEnvironment, getControlPlaneDb } from "@runsafe/shared";
 
 export const actionRoutes: FastifyPluginAsync = async (app) => {
   const actionRepo = new ActionRepository();
@@ -20,6 +20,109 @@ export const actionRoutes: FastifyPluginAsync = async (app) => {
   const approvalService = new ApprovalService();
   const executionAuthorizer = new ExecutionAuthorizer();
   const runbookRepo = new RunbookRepository();
+
+  // List all pending approval requests with associated Proof-Carrying Action
+  app.get("/api/v1/approvals/pending", async (_request, reply) => {
+    const db = getControlPlaneDb();
+    const rows = db.prepare(`
+      SELECT 
+        ar.id as approval_id,
+        ar.action_id,
+        ar.payload_hash,
+        ar.status as approval_status,
+        ar.created_at as approval_created_at,
+        ar.expires_at,
+        pca.incident_id,
+        pca.contract_id,
+        pca.step_id,
+        pca.tool_name,
+        pca.tool_arguments,
+        pca.justification_summary,
+        pca.confidence_score,
+        pca.risk_tier,
+        pca.blast_radius,
+        pca.is_reversible,
+        pca.status as action_status,
+        pca.created_at as action_created_at
+      FROM approval_requests ar
+      JOIN proof_carrying_actions pca ON ar.action_id = pca.id
+      WHERE ar.status = 'PENDING'
+      ORDER BY ar.created_at DESC
+      LIMIT 100
+    `).all() as any[];
+
+    const approvals = rows.map((r) => {
+      let blastRadius = { targetEnvironment: "LOCAL", affectedServices: ["checkout-service"] };
+      try {
+        blastRadius = typeof r.blast_radius === "string" ? JSON.parse(r.blast_radius) : r.blast_radius;
+      } catch {}
+
+      let toolArguments = {};
+      try {
+        toolArguments = typeof r.tool_arguments === "string" ? JSON.parse(r.tool_arguments) : r.tool_arguments;
+      } catch {}
+
+      return {
+        id: r.action_id,
+        actionId: r.action_id,
+        approvalId: r.approval_id,
+        incidentId: r.incident_id,
+        contractId: r.contract_id,
+        stepId: r.step_id,
+        toolName: r.tool_name,
+        toolArguments,
+        justificationSummary: r.justification_summary,
+        confidenceScore: r.confidence_score,
+        riskTier: r.risk_tier,
+        isReversible: Boolean(r.is_reversible),
+        blastRadius,
+        payloadHash: r.payload_hash,
+        status: r.approval_status,
+        actionStatus: r.action_status,
+        expiresAt: r.expires_at,
+        createdAt: r.approval_created_at,
+      };
+    });
+
+    return reply.status(200).send({
+      count: approvals.length,
+      approvals,
+    });
+  });
+
+  // List actions with optional filters
+  app.get("/api/v1/actions", async (request) => {
+    const query = request.query as any;
+    const db = getControlPlaneDb();
+    let sql = "SELECT * FROM proof_carrying_actions WHERE 1=1";
+    const params: any[] = [];
+    if (query?.status) {
+      sql += " AND status = ?";
+      params.push(query.status);
+    }
+    if (query?.incidentId) {
+      sql += " AND incident_id = ?";
+      params.push(query.incidentId);
+    }
+    sql += " ORDER BY created_at DESC LIMIT ?";
+    params.push(query?.limit ? parseInt(query.limit, 10) : 50);
+
+    const rows = db.prepare(sql).all(...params) as any[];
+    return {
+      count: rows.length,
+      actions: rows.map((r) => ({
+        id: r.id,
+        incidentId: r.incident_id,
+        contractId: r.contract_id,
+        stepId: r.step_id,
+        toolName: r.tool_name,
+        riskTier: r.risk_tier,
+        payloadHash: r.payload_hash,
+        status: r.status,
+        createdAt: r.created_at,
+      })),
+    };
+  });
 
   // 1. Propose a new Proof-Carrying Action
   app.post("/api/v1/actions/propose", async (request, reply) => {
@@ -45,7 +148,7 @@ export const actionRoutes: FastifyPluginAsync = async (app) => {
     const pca = buildProofCarryingAction(input, step);
     actionRepo.saveAction(pca);
 
-    return reply.status(201).send({ data: pca });
+    return reply.status(201).send({ data: pca, action: pca });
   });
 
   // 2. Evaluate a Proof-Carrying Action against Safety Kernel policies
@@ -82,6 +185,7 @@ export const actionRoutes: FastifyPluginAsync = async (app) => {
     const executions = executionAuthorizer.getExecutionsForAction(id);
 
     return {
+      action: pca,
       data: {
         action: pca,
         decision,
@@ -95,8 +199,9 @@ export const actionRoutes: FastifyPluginAsync = async (app) => {
   app.post("/api/v1/actions/:id/approval", async (request, reply) => {
     const { id } = request.params as { id: string };
     const bodySchema = z.object({
-      decision: z.enum(["APPROVE", "REJECT"]),
-      operatorId: z.string().min(1),
+      decision: z.enum(["APPROVE", "REJECT", "APPROVED", "REJECTED"]),
+      operatorId: z.string().optional(),
+      approvedBy: z.string().optional(),
       payloadHash: z.string().min(1),
       operatorNote: z.string().optional(),
     });
@@ -108,7 +213,9 @@ export const actionRoutes: FastifyPluginAsync = async (app) => {
       });
     }
 
-    const { decision, operatorId, payloadHash, operatorNote } = parsed.data;
+    const { decision: rawDecision, payloadHash, operatorNote } = parsed.data;
+    const operatorId = parsed.data.operatorId || parsed.data.approvedBy || "operator-ui";
+    const decision = (rawDecision === "APPROVED" || rawDecision === "APPROVE") ? "APPROVE" : "REJECT";
 
     if (decision === "APPROVE") {
       const result = approvalService.approveAction({
@@ -141,6 +248,9 @@ export const actionRoutes: FastifyPluginAsync = async (app) => {
     const updatedApproval = approvalService.getApprovalRequest(id);
 
     return {
+      success: true,
+      action: updatedAction,
+      approval: updatedApproval,
       data: {
         action: updatedAction,
         approval: updatedApproval,

@@ -65,7 +65,11 @@ export default function RehearsalsPage() {
 
       if (scenRes.ok) {
         const d: any = await scenRes.json();
-        setScenarios(d.scenarios || []);
+        const scList = d.scenarios || [];
+        setScenarios(scList);
+        if (scList.length > 0 && !selectedScenario) {
+          setSelectedScenario(scList[0].id);
+        }
       }
       if (runsRes.ok) {
         const d: any = await runsRes.json();
@@ -85,8 +89,9 @@ export default function RehearsalsPage() {
   }, []);
 
   const handleRunRehearsal = async () => {
+    if (!selectedScenario) return;
     setRunning(true);
-    setActiveLog("Starting staging rehearsal: Resetting environment to clean baseline...");
+    setActiveLog("Starting staging rehearsal: Resetting local simulator to clean baseline...");
     try {
       const res = await fetch("/api/v1/rehearsals/run", {
         method: "POST",
@@ -96,11 +101,15 @@ export default function RehearsalsPage() {
 
       if (res.ok) {
         const runData: any = await res.json();
-        setActiveLog(`Rehearsal completed with outcome: ${runData.outcome} in ${runData.durationMs}ms`);
+        setActiveLog(
+          `Rehearsal completed with outcome: [${runData.outcome}] in ${runData.durationMs}ms (Cleanup: ${
+            runData.details?.cleanup?.success ? "PASS" : "FAIL"
+          })`
+        );
         await fetchData();
       } else {
         const err: any = await res.json();
-        setActiveLog(`Rehearsal error: ${err.error?.message || "Failed"}`);
+        setActiveLog(`Rehearsal error: ${err.error?.message || err.message || "Execution Failed"}`);
       }
     } catch (err: any) {
       setActiveLog(`Rehearsal network error: ${err.message}`);
@@ -118,13 +127,13 @@ export default function RehearsalsPage() {
             Runbook CI &amp; Staging Rehearsals
           </h1>
           <p className="text-sm font-editorial-body text-neutral-600 mt-1">
-            Continuously prove recovery runbooks by injecting controlled faults into isolated staging before real incidents occur.
+            Continuously prove recovery runbooks by injecting controlled faults into isolated local simulation before real incidents occur.
           </p>
         </div>
 
         <div className="flex items-center space-x-2 text-xs font-tech-mono bg-neutral-100 border border-black/10 px-3 py-1.5 rounded-md">
           <Server className="w-3.5 h-3.5 text-black" />
-          <span>ENVIRONMENT: LOCAL DOCKER (ISOLATED)</span>
+          <span>ENVIRONMENT: LOCAL SIMULATOR (ISOLATED)</span>
         </div>
       </div>
 
@@ -135,10 +144,10 @@ export default function RehearsalsPage() {
             Overall Recovery Coverage
           </p>
           <p className="text-2xl font-serif-title font-bold text-black mt-1">
-            RECOVERY COVERAGE: {summary?.coverageFormatted || "100% (3/3 verified)"}
+            RECOVERY COVERAGE: {summary?.coverageFormatted || "0% (Not yet tested)"}
           </p>
           <p className="text-xs font-editorial-body text-neutral-600 mt-0.5">
-            All 3 critical failure modes verified against controlled staging infrastructure.
+            Recovery coverage strictly computed from fresh passing runs for the current simulator build.
           </p>
         </div>
 
@@ -163,125 +172,130 @@ export default function RehearsalsPage() {
           <span>Launch Staging Rehearsal</span>
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-          {scenarios.map((scen) => (
-            <button
-              key={scen.id}
-              onClick={() => setSelectedScenario(scen.id)}
-              className={`p-4 rounded-lg border text-left transition-all ${
-                selectedScenario === scen.id
-                  ? "border-black bg-black text-white"
-                  : "border-black/15 bg-white text-black hover:border-black/50"
-              }`}
-            >
-              <div className="flex justify-between items-center">
-                <span
-                  className={`text-[10px] font-tech-mono font-bold px-1.5 py-0.5 rounded-sm ${
-                    selectedScenario === scen.id
-                      ? "bg-neutral-800 text-white"
-                      : "bg-neutral-100 text-neutral-800"
-                  }`}
-                >
-                  {scen.faultType}
-                </span>
-                <span className="text-[10px] font-tech-mono">
-                  Target: {scen.targetService}
-                </span>
-              </div>
-              <p className="font-serif-title font-bold text-sm mt-2">{scen.name}</p>
-              <p
-                className={`text-[11px] font-editorial-body mt-1 line-clamp-2 ${
-                  selectedScenario === scen.id ? "text-neutral-300" : "text-neutral-600"
+        {scenarios.length === 0 ? (
+          <p className="text-xs font-tech-mono text-neutral-500 py-4">
+            Loading scenario catalog from control plane...
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+            {scenarios.map((scen) => (
+              <button
+                key={scen.id}
+                onClick={() => setSelectedScenario(scen.id)}
+                className={`p-4 rounded-lg border text-left transition-all ${
+                  selectedScenario === scen.id
+                    ? "border-black bg-black text-white"
+                    : "border-black/15 bg-white text-black hover:border-black/50"
                 }`}
               >
-                {scen.description}
-              </p>
-            </button>
-          ))}
-        </div>
-
-        <div className="pt-4 flex items-center justify-between border-t border-black/10">
-          <div className="text-xs font-tech-mono text-neutral-600">
-            Selected: <span className="font-bold text-black">{selectedScenario}</span>
+                <div className="flex justify-between items-center">
+                  <span
+                    className={`text-[10px] font-tech-mono font-bold px-1.5 py-0.5 rounded-sm ${
+                      selectedScenario === scen.id
+                        ? "bg-neutral-800 text-white"
+                        : "bg-neutral-100 text-neutral-800"
+                    }`}
+                  >
+                    {scen.faultType}
+                  </span>
+                  <span className="text-[10px] font-tech-mono">
+                    Target: {scen.targetService}
+                  </span>
+                </div>
+                <p className="font-serif-title font-bold text-sm mt-2">{scen.name}</p>
+                <p
+                  className={`text-[11px] font-editorial-body mt-1 line-clamp-2 ${
+                    selectedScenario === scen.id ? "text-neutral-300" : "text-neutral-600"
+                  }`}
+                >
+                  {scen.description}
+                </p>
+              </button>
+            ))}
           </div>
+        )}
 
+        <div className="flex items-center space-x-4 pt-2 border-t border-black/10">
           <button
+            disabled={running || scenarios.length === 0}
             onClick={handleRunRehearsal}
-            disabled={running}
-            className="inline-flex items-center space-x-2 px-6 py-2.5 bg-black text-white font-tech-mono font-bold text-xs uppercase tracking-wider rounded-md hover:bg-neutral-800 transition-colors disabled:opacity-50"
+            className="px-6 py-2.5 bg-black text-white text-xs font-tech-mono font-bold uppercase tracking-wider rounded-md hover:bg-neutral-800 disabled:opacity-50 transition-colors"
           >
-            <Play className="w-3.5 h-3.5" />
-            <span>{running ? "Running Staging Rehearsal..." : "Run Rehearsal"}</span>
+            {running ? "Executing Rehearsal..." : `Run Selected Scenario [${selectedScenario}]`}
           </button>
+          <span className="text-xs font-tech-mono text-neutral-500">
+            Isolated to local simulator. Pre &amp; post run cleanup guaranteed.
+          </span>
         </div>
 
         {activeLog && (
-          <div className="p-3 bg-neutral-900 text-neutral-200 text-xs font-tech-mono rounded-md border border-neutral-700">
-            &gt; {activeLog}
+          <div className="p-3 bg-neutral-50 border border-black/15 rounded-md text-xs font-tech-mono">
+            {activeLog}
           </div>
         )}
       </div>
 
-      {/* Historical Rehearsal Runs Table */}
+      {/* Rehearsal Execution Log Trail */}
       <div className="border border-black/15 bg-white rounded-lg p-6 space-y-4">
         <h2 className="font-tech-mono font-bold text-xs uppercase tracking-wider flex items-center space-x-2 border-b border-black/10 pb-3">
           <Clock className="w-4 h-4 text-black" />
-          <span>Recent Rehearsal Run Ledger ({runs.length})</span>
+          <span>Rehearsal Execution History ({runs.length})</span>
         </h2>
 
         {runs.length === 0 ? (
           <p className="text-xs font-tech-mono text-neutral-400 py-6 text-center">
-            No rehearsals executed yet. Click &quot;Run Rehearsal&quot; above to start.
+            No rehearsals run yet. Launch a scenario above to test recovery.
           </p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs font-tech-mono text-left">
-              <thead>
-                <tr className="border-b border-black/10 text-neutral-500 uppercase text-[10px]">
-                  <th className="py-2 px-3">Run ID</th>
-                  <th className="py-2 px-3">Scenario</th>
-                  <th className="py-2 px-3">Target</th>
-                  <th className="py-2 px-3">Duration</th>
-                  <th className="py-2 px-3">Outcome</th>
-                  <th className="py-2 px-3">Executed At</th>
-                  <th className="py-2 px-3 text-right">Details</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-black/5">
-                {runs.map((run) => (
-                  <tr key={run.id} className="hover:bg-neutral-50 transition-colors">
-                    <td className="py-2 px-3 font-semibold">{run.id.substring(0, 18)}...</td>
-                    <td className="py-2 px-3">{run.scenarioId}</td>
-                    <td className="py-2 px-3">{run.targetEnvironment}</td>
-                    <td className="py-2 px-3">{run.durationMs}ms</td>
-                    <td className="py-2 px-3">
-                      <span
-                        className={`px-2 py-0.5 rounded-sm font-bold text-[10px] ${
-                          run.outcome === "PASS"
-                            ? "bg-black text-white"
-                            : "bg-neutral-200 text-black"
-                        }`}
-                      >
-                        {run.outcome}
-                      </span>
-                    </td>
-                    <td className="py-2 px-3 text-neutral-500">
-                      {new Date(run.executedAt).toLocaleTimeString()}
-                    </td>
-                    <td className="py-2 px-3 text-right">
-                      {run.incidentId && (
-                        <Link
-                          href={`/incidents/${run.incidentId}`}
-                          className="underline hover:text-neutral-600"
-                        >
-                          View Incident Room
-                        </Link>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-3">
+            {runs.map((r) => (
+              <div
+                key={r.id}
+                onClick={() => setSelectedRun(selectedRun?.id === r.id ? null : r)}
+                className="p-4 border border-black/10 rounded-lg hover:border-black/30 cursor-pointer space-y-2 bg-neutral-50 transition-all text-xs font-tech-mono"
+              >
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center space-x-3">
+                    <span
+                      className={`font-bold px-2 py-0.5 rounded-sm ${
+                        r.outcome === "PASS"
+                          ? "bg-black text-white"
+                          : "bg-neutral-300 text-black border border-black"
+                      }`}
+                    >
+                      [{r.outcome}]
+                    </span>
+                    <span className="font-bold text-black">{r.scenarioId}</span>
+                  </div>
+                  <span className="text-neutral-500">
+                    {new Date(r.executedAt).toLocaleString()} ({r.durationMs}ms)
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center text-[11px] text-neutral-600">
+                  <span>Contract: {r.contractId}</span>
+                  {r.incidentId && (
+                    <Link
+                      href={`/incidents/${r.incidentId}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="underline text-black font-bold flex items-center space-x-1"
+                    >
+                      <span>Incident {r.incidentId.substring(0, 10)}...</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </Link>
+                  )}
+                </div>
+
+                {selectedRun?.id === r.id && (
+                  <div className="mt-3 p-3 bg-white border border-black/15 rounded text-[11px] space-y-2">
+                    <p className="font-bold text-black uppercase">Run Execution Details</p>
+                    <pre className="overflow-x-auto p-2 bg-neutral-100 rounded text-[10px]">
+                      {JSON.stringify(r.details, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>

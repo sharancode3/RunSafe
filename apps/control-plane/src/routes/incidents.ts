@@ -87,6 +87,7 @@ export async function incidentRoutes(app: FastifyInstance) {
 
     return reply.send({
       incident,
+      ...incident,
       contractSummary: contract
         ? {
             id: contract.id,
@@ -105,7 +106,17 @@ export async function incidentRoutes(app: FastifyInstance) {
       return reply.status(404).send({ error: "INCIDENT_NOT_FOUND" });
     }
 
-    const events = incidentRepository.getEvents(req.params.id);
+    const rawEvents = incidentRepository.getEvents(req.params.id);
+    const events = rawEvents.map((e: any) => ({
+      id: e.id,
+      incidentId: e.incident_id || e.incidentId,
+      incident_id: e.incident_id || e.incidentId,
+      eventType: e.event_type || e.eventType,
+      event_type: e.event_type || e.eventType,
+      payload: e.payload,
+      createdAt: e.created_at || e.createdAt,
+      created_at: e.created_at || e.createdAt,
+    }));
     return reply.send({ incidentId: req.params.id, events });
   });
 
