@@ -1,7 +1,7 @@
 # RunSafe Project Memory
 
 ## Current Stage
-Stage 1: Foundation & Runtime Bootstrap (Environment verification & initial project architecture setup)
+Stage 1: Foundation & TrueForge/OpenAI Runtime Proof (Code Complete; Verified via automated test suite; BLOCKED on external organizer keys for hosted OpenAI & Daytona sandbox).
 
 ## Completed
 - Canonical Master Project Context initialized and locked in `docs/RUNSAFE_PROJECT_CONTEXT.md` (Read-Only source of truth).
@@ -16,14 +16,25 @@ Stage 1: Foundation & Runtime Bootstrap (Environment verification & initial proj
 - Authoritative System & Infrastructure Architecture Specification completed and frozen in `docs/architecture/09_SYSTEM_INFRASTRUCTURE_ARCHITECTURE.md` (C4 context & container architecture, physical deployment, network & trust boundaries, dual execution pipeline, Primary OpenAI Model integration via TrueForge + local Qwen3 4B fallback, AWS EC2 via SSM primary target + local Docker fallback, progressive canary rollback, and independent objective verifier).
 - Authoritative Agent, TrueForge & Safety Architecture Specification completed and frozen in `docs/architecture/10_AGENT_TRUEFORGE_SAFETY_ARCHITECTURE.md` (Saved agent definition in TrueForge on localhost:8790, programmatic Next.js/Fastify integration, typed MCP tool layer, TrueForge isolated Python sandbox, deterministic Safety Kernel outside LLM, immutable Proof-Carrying Actions with SHA-256 fingerprinting, human approval gating, and independent objective verifier).
 - Authoritative Incident Recovery & Reliability Architecture Specification completed and frozen in `docs/architecture/11_INCIDENT_RECOVERY_RELIABILITY_ARCHITECTURE.md` (Formal 12-state Incident and 15-state Action lifecycles, transactional Recovery Steps, evidence sufficiency gating, progressive single-replica canary remediation, multi-metric and synthetic checkout verification, confidence-based abstention, Runbook CI rehearsal isolation, and runbook drift proposals).
-- Verified `@truefoundry/trueforge` CLI (v0.2.1) downloaded and operational via `npx` (runs on default port 8790 in standalone mode with SQLite).
+- Verified `@truefoundry/trueforge` CLI (v0.2.1) operational on default port `8790` (standalone SQLite mode, local network policy configured for localhost MCP/model bridging).
+- TypeScript monorepo initialized with npm workspaces: `packages/shared`, `packages/mcp-server`, `packages/trueforge-client`, `apps/control-plane`.
+- Shared runtime schemas and Zod contracts created: `RuntimeStatusSchema`, `GuardedNoopInputSchema`, `GuardedNoopOutputSchema`, `ReadinessReportSchema`, `RunSafeEventEnvelopeSchema`.
+- RunSafe MCP server implemented (`@runsafe/mcp-server` on `http://127.0.0.1:4001/sse`) exposing `get_runtime_status` and `stage1_guarded_noop`.
+- Saved agent `runsafe-agent` registered in TrueForge with attached `runsafe-mcp` server, `preload: true`, and checkpoint approval required on `stage1_guarded_noop`.
+- TrueForge tool execution genuinely verified: agent selects `get_runtime_status`, queries MCP server over SSE, receives structured JSON result, and returns factual observation.
+- TrueForge human checkpoint genuinely verified: agent pauses on `stage1_guarded_noop`, yielding `tool.approval_required` with `thread_id` and `tool_call_id`. Tested both REJECT (operator denies -> 0 executions) and APPROVE (operator allows -> 1 execution -> agent resumes).
+- Fastify control plane implemented (`@runsafe/control-plane` on `http://127.0.0.1:4000`) with `/health`, `/api/system/readiness`, `/api/dev/trueforge/smoke-run`, and `/api/dev/trueforge/approval-run`.
+- TrueForge event normalizer implemented in `@runsafe/trueforge-client`, mapping runtime events to domain events (`MODEL_ACTIVITY`, `TOOL_CALL_COMPLETED`, `APPROVAL_WAITING`, `APPROVAL_RESOLVED`, `AGENT_RUN_COMPLETED`).
+- 18 Vitest unit tests passing across schemas, normalizer, and MCP tools.
+- Automated verification script `npm run stage1:verify` implemented and executing all checks live.
 
-## Partially Completed
-- Complete specification & architecture suite 100% finalized and frozen across 8 core documents. Ready for immediate Stage 1 code implementation.
+## Blocked on Organizer Provisioning
+- Organizer OpenAI Model Provider: Awaiting `OPENAI_API_KEY`. (Local Qwen3 4B via Ollama on port 11434 actively verified as functional working fallback).
+- Daytona Sandbox Provider: Awaiting `DAYTONA_API_KEY`. (TrueForge on Windows 11 host requires Daytona SDK for sandbox execution; `LocalSandboxProvider` supports macOS and Linux only).
 
 ## Pending
-- Stage 1: Repository bootstrap (TypeScript monorepo / Fastify control plane + Next.js frontend + shared Zod schemas + SQLite).
 - Stage 2: Real Demo Infrastructure (Docker Compose with Nginx canary reverse proxy, checkout-api replicas, PostgreSQL, traffic generation & failure injection).
+
 - Stage 3: TrueForge Agent Core & Model Routing.
 - Stage 4: Typed MCP Tool Layer.
 - Stage 5: Runbook Compiler & Recovery Contracts.

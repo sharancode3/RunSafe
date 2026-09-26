@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@runsafe/shared": ["packages/shared/src"],
+      "@runsafe/trueforge-client": ["packages/trueforge-client/src"],
+      "@runsafe/mcp-server": ["packages/mcp-server/src"]
+    }
+  },
+  "exclude": ["node_modules", "dist"]
+}

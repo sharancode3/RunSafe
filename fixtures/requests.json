@@ -1,0 +1,22 @@
+[
+  { "id": "req-101", "version": "v1.0.0", "status": 200, "latencyMs": 42 },
+  { "id": "req-102", "version": "v1.0.0", "status": 200, "latencyMs": 38 },
+  { "id": "req-103", "version": "v1.0.0", "status": 200, "latencyMs": 45 },
+  { "id": "req-104", "version": "v1.0.0", "status": 200, "latencyMs": 51 },
+  { "id": "req-105", "version": "v1.0.0", "status": 200, "latencyMs": 39 },
+  { "id": "req-106", "version": "v1.0.0", "status": 200, "latencyMs": 40 },
+  { "id": "req-107", "version": "v1.0.0", "status": 200, "latencyMs": 44 },
+  { "id": "req-108", "version": "v1.0.0", "status": 200, "latencyMs": 48 },
+  { "id": "req-109", "version": "v1.0.0", "status": 200, "latencyMs": 37 },
+  { "id": "req-110", "version": "v1.0.0", "status": 200, "latencyMs": 41 },
+  { "id": "req-201", "version": "v2.0.0", "status": 200, "latencyMs": 55 },
+  { "id": "req-202", "version": "v2.0.0", "status": 500, "latencyMs": 1205 },
+  { "id": "req-203", "version": "v2.0.0", "status": 500, "latencyMs": 1340 },
+  { "id": "req-204", "version": "v2.0.0", "status": 200, "latencyMs": 62 },
+  { "id": "req-205", "version": "v2.0.0", "status": 500, "latencyMs": 1410 },
+  { "id": "req-206", "version": "v2.0.0", "status": 500, "latencyMs": 1290 },
+  { "id": "req-207", "version": "v2.0.0", "status": 200, "latencyMs": 58 },
+  { "id": "req-208", "version": "v2.0.0", "status": 500, "latencyMs": 1380 },
+  { "id": "req-209", "version": "v2.0.0", "status": 500, "latencyMs": 1450 },
+  { "id": "req-210", "version": "v2.0.0", "status": 200, "latencyMs": 64 }
+]
