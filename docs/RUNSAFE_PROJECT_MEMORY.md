@@ -9,6 +9,7 @@ Stage 1: Foundation & Runtime Bootstrap (Environment verification & initial proj
 - Git repository initialized on `main` branch with remote: `https://github.com/sharancode3/RunSafe.git`.
 - Strict `.gitignore` created to prevent leaking secrets, node_modules, and environment files.
 - Authoritative Product Requirements Document (PRD) completed and frozen in `docs/03_PRD.md` (IDs `FR-001` through `FR-049`, `NFR-001` through `NFR-012`).
+- Authoritative Technical Requirements Document (TRD) completed and frozen in `docs/04_TRD.md` (IDs `TR-001` through `TR-016`, pipeline architectures, hardware budget, and scenario criteria).
 - Verified `@truefoundry/trueforge` CLI (v0.2.1) downloaded and operational via `npx` (runs on default port 8790 in standalone mode with SQLite).
 
 ## Partially Completed
