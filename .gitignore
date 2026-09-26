@@ -21,9 +21,12 @@ out/
 
 # SQLite databases & logs
 *.db
+*.db-*
 *.sqlite
 *.sqlite3
 *.sqlite-journal
+data/*.db*
+data/
 logs/
 *.log
 artifacts/*.jsonl

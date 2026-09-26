@@ -16,7 +16,9 @@
       "@runsafe/shared": ["packages/shared/src"],
       "@runsafe/trueforge-client": ["packages/trueforge-client/src"],
       "@runsafe/mcp-server": ["packages/mcp-server/src"],
-      "@runsafe/infrastructure-adapter": ["packages/infrastructure-adapter/src"]
+      "@runsafe/infrastructure-adapter": ["packages/infrastructure-adapter/src"],
+      "@runsafe/runbooks": ["packages/runbooks/src"],
+      "@runsafe/evidence": ["packages/evidence/src"]
     }
   },
   "exclude": ["node_modules", "dist"]

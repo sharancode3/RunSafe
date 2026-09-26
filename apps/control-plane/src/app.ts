@@ -3,6 +3,8 @@ import cors from "@fastify/cors";
 import { healthRoutes } from "./routes/health.js";
 import { readinessRoutes } from "./routes/readiness.js";
 import { devTrueForgeRoutes } from "./routes/dev-trueforge.js";
+import { runbookRoutes } from "./routes/runbooks.js";
+import { evidenceRoutes } from "./routes/evidence.js";
 
 export function buildApp(): FastifyInstance {
   const app = fastify({
@@ -31,6 +33,8 @@ export function buildApp(): FastifyInstance {
   app.register(healthRoutes);
   app.register(readinessRoutes);
   app.register(devTrueForgeRoutes);
+  app.register(runbookRoutes);
+  app.register(evidenceRoutes);
 
   // Global structured error handler
   app.setErrorHandler((error: any, request, reply) => {

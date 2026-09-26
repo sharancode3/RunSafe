@@ -38,10 +38,10 @@ async function main() {
   console.log("Output Content:\n", result.turn.state?.output?.content || "(no text output)");
   console.log("Normalized Events Captured:", result.normalizedEvents.length);
 
-  const toolEvents = result.normalizedEvents.filter((e) => Boolean(e?.eventType && e.eventType.startsWith("TOOL_")));
+  const toolEvents = result.normalizedEvents.filter((e) => Boolean(e?.type && e.type.startsWith("TOOL_")));
   console.log(`Tool Events (${toolEvents.length}):`);
   for (const te of toolEvents) {
-    console.log(`  - [${te.eventType}] ${(te.payload as any)?.toolName || (te.payload as any)?.name || ""}`);
+    console.log(`  - [${te.type}] ${(te.payload as any)?.toolName || (te.payload as any)?.name || ""}`);
   }
 
   if (result.turn.state?.status === "done" || result.turn.state?.status === "running") {

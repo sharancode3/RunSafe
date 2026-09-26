@@ -1,13 +1,13 @@
 # RunSafe Project Memory
 
 ## Current Stage
-Stage 3: Typed MCP Tools + Infrastructure Adapter (Completed & Verified locally; TrueForge agent E2E read & mutation verified; AWS adapter cleanly BLOCKED awaiting organizer credentials).
+Stage 4: Runbook, Recovery Contract & Evidence Engine (Completed & Verified locally; automated Stage 4 verification 100% green; 57 unit tests passing).
 
 ## Completed
 - Canonical Master Project Context initialized and locked in `docs/RUNSAFE_PROJECT_CONTEXT.md` (Read-Only source of truth).
 - Living implementation memory established in `docs/RUNSAFE_PROJECT_MEMORY.md`.
 - Git repository initialized on `main` branch with remote: `https://github.com/sharancode3/RunSafe.git`.
-- Strict `.gitignore` created to prevent leaking secrets, node_modules, environment files, and large traffic logs.
+- Strict `.gitignore` created to prevent leaking secrets, node_modules, environment files, SQLite databases/WAL files, and large traffic logs.
 - Authoritative Product Requirements Document (PRD) completed and frozen in `docs/03_PRD.md` (IDs `FR-001` through `FR-049`, `NFR-001` through `NFR-012`).
 - Authoritative Technical Requirements Document (TRD) completed and frozen in `docs/04_TRD.md` (IDs `TR-001` through `TR-016`, pipeline architectures, hardware budget, and scenario criteria).
 - Authoritative Workflow & Data Flow Specification completed and frozen in `docs/05_WORKFLOW_AND_DATA_FLOW.md` (Workflows `WF-INC-001` through `WF-SSE-001`, sequence diagrams, state matrices, and hero flow traces).
@@ -17,7 +17,7 @@ Stage 3: Typed MCP Tools + Infrastructure Adapter (Completed & Verified locally;
 - Authoritative Agent, TrueForge & Safety Architecture Specification completed and frozen in `docs/architecture/10_AGENT_TRUEFORGE_SAFETY_ARCHITECTURE.md` (Saved agent definition in TrueForge on localhost:8790, programmatic Next.js/Fastify integration, typed MCP tool layer, TrueForge isolated Python sandbox, deterministic Safety Kernel outside LLM, immutable Proof-Carrying Actions with SHA-256 fingerprinting, human approval gating, and independent objective verifier).
 - Authoritative Incident Recovery & Reliability Architecture Specification completed and frozen in `docs/architecture/11_INCIDENT_RECOVERY_RELIABILITY_ARCHITECTURE.md` (Formal 12-state Incident and 15-state Action lifecycles, transactional Recovery Steps, evidence sufficiency gating, progressive single-replica canary remediation, multi-metric and synthetic checkout verification, confidence-based abstention, Runbook CI rehearsal isolation, and runbook drift proposals).
 - Verified `@truefoundry/trueforge` CLI (v0.2.1) operational on default port `8790` (standalone SQLite mode, local network policy configured for localhost MCP/model bridging).
-- TypeScript monorepo initialized with npm workspaces: `packages/shared`, `packages/mcp-server`, `packages/trueforge-client`, `packages/infrastructure-adapter`, `apps/control-plane`, `apps/demo-workload/checkout-api`.
+- TypeScript monorepo initialized with npm workspaces: `packages/shared`, `packages/mcp-server`, `packages/trueforge-client`, `packages/infrastructure-adapter`, `packages/runbooks`, `packages/evidence`, `apps/control-plane`, `apps/demo-workload/checkout-api`.
 - Shared operational contracts created (`packages/shared/src/operational`): `target-environment`, `errors`, `sanitizer`, `resource-registry`, `tool-registry`, `envelope`, `schemas`.
 - Resource Registry implemented: 5 registered resources (`checkout-service`, `checkout-api-1`, `checkout-api-2`, `postgres`, `nginx`); unknown targets fail closed immediately.
 - Tool Registry implemented: 15 typed tools (8 observation, 3 mutation, 4 rehearsal) with risk metadata, reversibility, timeout, and capability mode filtering.
@@ -34,8 +34,30 @@ Stage 3: Typed MCP Tools + Infrastructure Adapter (Completed & Verified locally;
   - Agent `runsafe-agent` updated with approval policy requiring human checkpoint approval on destructive tools: `restart_service`, `rollback_canary`, `rollback_full`, `reset_environment`, `stage1_guarded_noop`.
   - TrueForge Read E2E: Agent queried `get_service_health` and `get_deployment_state` over MCP and synthesized grounded operational report.
   - TrueForge Mutation E2E: Agent called `restart_service` on crashed replica, TrueForge paused for human approval checkpoint, operator submitted approval, container was restored and verified healthy on Docker!
-- 41 Vitest unit tests passing across 5 suites (`tests/unit/`).
-- Automated Stage 3 Verifier (`scripts/stage3_verify.ts` via `npm run stage3:verify`).
+- Automated Stage 1, Stage 2, and Stage 3 Verifiers passing (`npm run stage1:verify`, `npm run stage2:verify`, `npm run stage3:verify`).
+- Stage 4 Delivered (`packages/runbooks` and `packages/evidence`):
+  - Canonical human-authored recovery runbook created (`runbooks/checkout_recovery_runbook.md`) and version 2 created (`runbooks/checkout_recovery_runbook_v2.md`).
+  - SQLite database persistence initialized with WAL mode and `PRAGMA busy_timeout = 5000;` (`data/runsafe.db`) across 5 Stage 4 tables (`runbooks`, `runbook_versions`, `recovery_contracts`, `evidence`, `hypotheses`).
+  - RecoveryContract schema & deterministic validators:
+    - Tool reference validator (fails closed on unregistered tools).
+    - Resource reference validator (fails closed on unregistered resources).
+    - Risk downgrade prevention (AI models cannot lower risk tier below registry level).
+    - Rehearsal tool isolation (fault injection tools prohibited in recovery contracts).
+    - Branch graph integrity (validates entryStepId, edge targets, reachability, cycle safety).
+    - Contract activation guards (only `STRUCTURALLY_VALID` contracts can be activated; enforces single active contract invariant).
+  - Evidence Engine:
+    - Normalizers convert Stage 3 observation outputs into typed `EvidenceRecord`s.
+    - Credential and secret sanitization on all observed values.
+    - Freshness evaluation (`FRESH` vs `STALE`).
+    - Sufficiency evaluation (`SATISFIED` vs `MISSING` vs `CONFLICTING`).
+    - Telemetry conflict detector (catches shallow health probe fallacy: HTTP 200 health probe vs failed synthetic transaction).
+    - Isolated Python diagnostic script execution (`analyze_logs.py`) in isolated subprocess/container with SIGKILL timeout, producing schema-enforced derived evidence linked to source raw evidence IDs.
+    - Hypothesis generation citing validated Evidence IDs; rejects hallucinated or unverified IDs.
+  - Fastify Control Plane upgraded with REST APIs:
+    - `/api/v1/runbooks`, `/api/v1/runbooks/compile`, `/api/v1/runbooks/contracts/:id/activate`, `/api/v1/runbooks/active/:service`.
+    - `/api/v1/evidence`, `/api/v1/evidence/collect`, `/api/v1/evidence/sandbox/analyze`, `/api/v1/evidence/hypotheses`, `/api/v1/evidence/sufficiency`.
+  - 57 Vitest unit tests passing 100% across 7 test suites (`npm test`).
+  - Automated Stage 4 Verifier script (`scripts/stage4_verify.ts` via `npm run stage4:verify`) passing 100% across all 22 criteria.
 
 ## Blocked on Organizer Provisioning
 - Organizer OpenAI Model Provider: Awaiting `OPENAI_API_KEY` (arrival scheduled for 2:00 PM). Local Qwen3 4B via Ollama actively verified as working fallback.
