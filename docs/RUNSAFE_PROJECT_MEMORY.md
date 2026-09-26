@@ -9,7 +9,7 @@
 *(Category descriptor: AI SRE Control Plane)*
 
 ## Current Stage
-Stage 4: Runbook, Recovery Contract & Evidence Engine (Completed & Verified locally; automated Stage 4 verification 100% green; 57 unit tests passing).
+Stage 5: Proof-Carrying Actions & Deterministic Safety Kernel (Completed & Verified locally; automated Stage 1-5 verifications 100% green; 78 unit tests passing across 10 test suites).
 
 ## Completed
 - Official Problem Statement Alignment Audited & Locked: RunSafe is positioned unmistakably as a **Runbook Executor** first. All architectural subsystems (Recovery Contracts, Evidence Engine, Proof-Carrying Actions, Safety Kernel, TrueForge Sandbox, Progressive Canary Rollback, Independent Verifier, Runbook CI) are explicitly structured as capabilities that enhance and guarantee safe runbook execution.
@@ -67,6 +67,40 @@ Stage 4: Runbook, Recovery Contract & Evidence Engine (Completed & Verified loca
     - `/api/v1/evidence`, `/api/v1/evidence/collect`, `/api/v1/evidence/sandbox/analyze`, `/api/v1/evidence/hypotheses`, `/api/v1/evidence/sufficiency`.
   - 57 Vitest unit tests passing 100% across 7 test suites (`npm test`).
   - Automated Stage 4 Verifier script (`scripts/stage4_verify.ts` via `npm run stage4:verify`) passing 100% across all 22 criteria.
+- Stage 5 Delivered (`packages/actions` and `packages/safety-kernel`):
+  - `@runsafe/actions` package created:
+    - Domain schemas: `ProofCarryingAction`, `ActionProposalInput`, `ActionStatus`, `BlastRadius`.
+    - Cryptographic SHA-256 deterministic fingerprinting (`computeActionFingerprint`, `verifyActionFingerprint`). Key order canonicalization guarantees tamper resistance.
+    - Authoritative risk enrichment: Tool risk tier and reversibility are locked to `TOOL_REGISTRY` (cannot be downgraded by LLMs).
+    - SQLite repository (`ActionRepository`) with atomic status transitions (`updateActionStatus`) preventing invalid states and concurrent race conditions.
+  - `@runsafe/safety-kernel` package created:
+    - Pure deterministic policy pipeline (zero LLM reliance):
+      - Tool Risk Policy: Tool must be registered in authoritative registry; capability mode isolation strictly enforced (`REHEARSAL_TOOL_IN_RECOVERY` fail-closed).
+      - Contract Authority Policy: Action must bind to an active `RecoveryContract` and step; step tool and resource must match.
+      - Evidence Freshness & Coverage Policy: Supporting evidence must exist, have age <= 120s (`STALE_EVIDENCE` fail-closed), and cover all mandatory contract evidence requirements.
+      - Precondition Policy: Deterministic evaluation of contract step assertions (`STATUS_DEGRADED`, `PROCESS_CRASHED`, `ERROR_RATE_GT_5`, `DB_HEALTHY`, `SCHEMA_LOCK_DETECTED`) against observed evidence.
+      - Blast Radius Policy: Restricts blast radius according to environment boundaries.
+    - Decision mapping:
+      - Read-only tools -> `AUTO_ALLOW` (`READ_ONLY_OBSERVATION_ALLOWED`).
+      - Low-risk reversible tools matching contract preconditions -> `AUTO_ALLOW` (`AUTONOMOUS_LOW_RISK_APPROVED`).
+      - High-risk / destructive tools or steps with `requiresApproval: true` -> `APPROVAL_REQUIRED` (`HUMAN_APPROVAL_MANDATORY_HIGH_RISK`).
+    - Approval Service (`ApprovalService`):
+      - Creates `approval_requests` records in SQLite bound to exact `payload_hash`.
+      - Enforces exact cryptographic SHA-256 fingerprint verification on operator approval (tampered arguments/targets fail with `FINGERPRINT_MISMATCH`).
+    - Execution Authorizer (`ExecutionAuthorizer`):
+      - Single-use cryptographically random execution token (`token_...`).
+      - Atomic execution claim guard: transitions status to `EXECUTING` only if in valid runnable state; subsequent concurrent claim attempts fail immediately with `DUPLICATE_EXECUTION_BLOCKED`.
+      - Non-declaration invariant: technical success (`exitCode === 0`) records tool execution output without declaring business recovery (Stage 6 independent verifier owns truth).
+  - SQLite persistence extended to 9 tables: added `proof_carrying_actions`, `safety_policy_decisions`, `approval_requests`, `tool_executions`.
+  - Fastify Control Plane endpoints added in `apps/control-plane/src/routes/actions.ts`:
+    - `POST /api/v1/actions/propose`: builds and saves validated PCA.
+    - `POST /api/v1/actions/:id/evaluate`: runs Safety Kernel policies, creates approval request if needed.
+    - `GET /api/v1/actions/:id`: retrieves PCA, safety decision, approval request, and tool execution logs.
+    - `POST /api/v1/actions/:id/approval`: approves or rejects action with cryptographic fingerprint verification.
+    - `POST /api/v1/actions/:id/execute`: atomically claims execution and dispatches tool via `InfrastructureAdapter`.
+  - MCP Server mutation guard upgraded: validates single-use execution tokens against `tool_executions` table in SQLite.
+  - 78 Vitest unit tests passing 100% across 10 test suites (`tests/unit/pca.test.ts`, `tests/unit/safety-kernel.test.ts`, `tests/unit/action-routes.test.ts`, etc.).
+  - Automated Stage 5 Verifier (`scripts/stage5_verify.ts` via `npm run stage5:verify`) passing 100% across all 12 validation criteria.
 
 ## Blocked on Organizer Provisioning
 - Organizer OpenAI Model Provider: Awaiting `OPENAI_API_KEY` (arrival scheduled for 2:00 PM). Local Qwen3 4B via Ollama actively verified as working fallback.

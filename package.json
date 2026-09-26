@@ -17,6 +17,7 @@
     "stage2:verify": "tsx scripts/stage2_verify.ts",
     "stage3:verify": "tsx scripts/stage3_verify.ts",
     "stage4:verify": "tsx scripts/stage4_verify.ts",
+    "stage5:verify": "tsx scripts/stage5_verify.ts",
     "traffic:run": "tsx infrastructure/scripts/traffic_generator.ts",
     "fault:crash": "tsx infrastructure/scripts/fault_crash.ts",
     "fault:bad-deploy": "tsx infrastructure/scripts/fault_bad_deployment.ts",

@@ -32,6 +32,7 @@ import {
   InjectBadDeploymentInputSchema,
   InjectAmbiguousFailureInputSchema,
   ResetEnvironmentInputSchema,
+  getControlPlaneDb,
 } from "@runsafe/shared";
 import { getInfrastructureAdapter } from "@runsafe/infrastructure-adapter";
 
@@ -61,8 +62,21 @@ export class RunSafeMcpServer {
     if (process.env.RUNSAFE_ALLOW_STAGE3_TEST_MUTATIONS === "true") {
       return true;
     }
-    if (authContext && authContext.startsWith("test-ctx-") || authContext?.startsWith("auth-")) {
+    if (authContext && (authContext.startsWith("test-ctx-") || authContext.startsWith("auth-"))) {
       return true;
+    }
+    // Stage 5 execution tokens verification
+    if (authContext && authContext.startsWith("token_")) {
+      try {
+        const db = getControlPlaneDb();
+        const stmt = db.prepare("SELECT status FROM tool_executions WHERE execution_token = ?");
+        const row = stmt.get(authContext) as any;
+        if (row && (row.status === "PENDING" || row.status === "SUCCESS")) {
+          return true;
+        }
+      } catch {
+        return false;
+      }
     }
     return false;
   }

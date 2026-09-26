@@ -18,7 +18,9 @@
       "@runsafe/mcp-server": ["packages/mcp-server/src"],
       "@runsafe/infrastructure-adapter": ["packages/infrastructure-adapter/src"],
       "@runsafe/runbooks": ["packages/runbooks/src"],
-      "@runsafe/evidence": ["packages/evidence/src"]
+      "@runsafe/evidence": ["packages/evidence/src"],
+      "@runsafe/actions": ["packages/actions/src"],
+      "@runsafe/safety-kernel": ["packages/safety-kernel/src"]
     }
   },
   "exclude": ["node_modules", "dist"]

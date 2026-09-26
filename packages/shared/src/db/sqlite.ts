@@ -115,6 +115,77 @@ export function initDatabase(dbPath?: string): DatabaseSync {
       created_at TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_hypotheses_context ON hypotheses(context_id);
+
+    CREATE TABLE IF NOT EXISTS proof_carrying_actions (
+      id TEXT PRIMARY KEY,
+      incident_id TEXT NOT NULL,
+      contract_id TEXT NOT NULL,
+      step_id TEXT NOT NULL,
+      tool_name TEXT NOT NULL,
+      tool_arguments TEXT NOT NULL,
+      payload_hash TEXT NOT NULL,
+      justification_summary TEXT NOT NULL,
+      confidence_score REAL NOT NULL,
+      supporting_evidence_ids TEXT NOT NULL,
+      risk_tier TEXT NOT NULL,
+      blast_radius TEXT NOT NULL,
+      is_reversible INTEGER NOT NULL DEFAULT 0,
+      rollback_procedure TEXT,
+      verification_criteria TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'PROPOSED',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_pca_incident ON proof_carrying_actions(incident_id);
+    CREATE INDEX IF NOT EXISTS idx_pca_hash ON proof_carrying_actions(payload_hash);
+    CREATE INDEX IF NOT EXISTS idx_pca_status ON proof_carrying_actions(status);
+
+    CREATE TABLE IF NOT EXISTS safety_policy_decisions (
+      id TEXT PRIMARY KEY,
+      action_id TEXT NOT NULL,
+      policy_decision TEXT NOT NULL,
+      reason_code TEXT NOT NULL,
+      reason_message TEXT NOT NULL,
+      matched_rule TEXT NOT NULL,
+      preconditions_passed INTEGER NOT NULL DEFAULT 1,
+      checks_summary TEXT NOT NULL,
+      evaluated_at TEXT NOT NULL,
+      FOREIGN KEY (action_id) REFERENCES proof_carrying_actions(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_safety_decisions_action ON safety_policy_decisions(action_id);
+
+    CREATE TABLE IF NOT EXISTS approval_requests (
+      id TEXT PRIMARY KEY,
+      action_id TEXT NOT NULL UNIQUE,
+      payload_hash TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'PENDING',
+      decided_by TEXT,
+      operator_note TEXT,
+      decided_at TEXT,
+      expires_at TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (action_id) REFERENCES proof_carrying_actions(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_approvals_action ON approval_requests(action_id);
+    CREATE INDEX IF NOT EXISTS idx_approvals_hash ON approval_requests(payload_hash);
+
+    CREATE TABLE IF NOT EXISTS tool_executions (
+      id TEXT PRIMARY KEY,
+      action_id TEXT NOT NULL,
+      incident_id TEXT NOT NULL,
+      tool_name TEXT NOT NULL,
+      arguments_snapshot TEXT NOT NULL,
+      execution_token TEXT NOT NULL UNIQUE,
+      status TEXT NOT NULL DEFAULT 'PENDING',
+      exit_code INTEGER,
+      duration_ms INTEGER,
+      raw_output_excerpt TEXT,
+      error_message TEXT,
+      executed_at TEXT NOT NULL,
+      FOREIGN KEY (action_id) REFERENCES proof_carrying_actions(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_tool_executions_action ON tool_executions(action_id);
+    CREATE INDEX IF NOT EXISTS idx_tool_executions_token ON tool_executions(execution_token);
   `);
 
   return db;

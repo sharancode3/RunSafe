@@ -5,6 +5,7 @@ import { readinessRoutes } from "./routes/readiness.js";
 import { devTrueForgeRoutes } from "./routes/dev-trueforge.js";
 import { runbookRoutes } from "./routes/runbooks.js";
 import { evidenceRoutes } from "./routes/evidence.js";
+import { actionRoutes } from "./routes/actions.js";
 
 export function buildApp(): FastifyInstance {
   const app = fastify({
@@ -35,6 +36,7 @@ export function buildApp(): FastifyInstance {
   app.register(devTrueForgeRoutes);
   app.register(runbookRoutes);
   app.register(evidenceRoutes);
+  app.register(actionRoutes);
 
   // Global structured error handler
   app.setErrorHandler((error: any, request, reply) => {
